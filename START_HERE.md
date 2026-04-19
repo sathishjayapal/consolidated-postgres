@@ -1,10 +1,33 @@
 # 🚀 START HERE - Prerequisites & Setup Guide
 
-## Your Cloud Infrastructure Status
+## New Machine Setup (Local Dev)
 
-✅ **CREATED** - PostgreSQL cluster is running in DigitalOcean
-⚠️ **COSTING** - $0.67/day ($20/month if left running 30 days)
-❌ **NOT STOPPED** - Infrastructure still exists
+This repo is now on GitHub. On any new machine, clone it as a sibling of `eventstracker` and `jubilant-memory`:
+
+```bash
+cd ~/IdeaProjects   # or wherever you keep your projects
+git clone https://github.com/sathishjayapal/consolidated-postgres.git
+git clone https://github.com/sathishjayapal/eventstracker.git        # if not already cloned
+git clone https://github.com/sathishjayapal/jubilant-memory.git       # if not already cloned
+```
+
+Then start local dev:
+```bash
+cd consolidated-postgres
+./scripts/local/multi-dev-up.sh
+```
+
+Or start just eventstracker:
+```bash
+cd eventstracker
+./eventtracker.sh dev
+```
+
+> **Note:** `terraform.tfvars` (DigitalOcean API token) is **gitignored** — you must create it manually on each machine if you need cloud infrastructure. See the Cloud Infrastructure section below.
+
+---
+
+## Cloud Infrastructure Status
 
 **⚠️ IMPORTANT LIMITATION:**
 - ✅ `cloud-start.sh` works on ANY computer (creates infrastructure)
@@ -12,8 +35,6 @@
 - ❌ `cloud-stop.sh` works ONLY on Tahoe (macOS 12.7.6 has socket errors)
 
 **To shutdown infrastructure: Use Tahoe Mac**
-
-**This guide applies to ANY cPooomputer** - Follow these steps on any machine to operate the infrastructure.
 
 ---
 
@@ -236,8 +257,12 @@ Type: `yes`
    jq --version
    ```
 
-2. **Copy This Folder** to your machine
-   - All 3 terraform files must be present
+2. **Clone this repo** to your machine
+   ```bash
+   git clone https://github.com/sathishjayapal/consolidated-postgres.git
+   cd consolidated-postgres
+   ```
+   - Create `terraform.tfvars` with your DigitalOcean API token (not in git — see Important Notes)
    - `.env.cloud` is only needed if infrastructure already exists
    - `terraform.tfstate` is only needed if infrastructure already exists
 
@@ -326,9 +351,10 @@ If `terraform.tfstate` and `.env.cloud` already exist:
 
 ### "I need to work on another computer"
 1. Install prerequisites on new computer
-2. Copy `consolidated-postgres` folder
-3. Run `./diagnose.sh` to verify
-4. Run `./cloud-start.sh` if needed (or `./cloud-stop.sh` if already running)
+2. `git clone https://github.com/sathishjayapal/consolidated-postgres.git`
+3. Create `terraform.tfvars` with your DO token
+4. Run `./diagnose.sh` to verify
+5. Run `./cloud-start.sh` if needed (or `./cloud-stop.sh` if already running)
 
 ### "I forgot if infrastructure is running"
 ```bash
