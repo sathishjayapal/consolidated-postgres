@@ -12,14 +12,15 @@ set -euo pipefail
 #################################################################
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$SCRIPT_DIR"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+WORKSPACE_ROOT="$(cd "$REPO_ROOT/.." && pwd)"
+PROJECT_ROOT="$WORKSPACE_ROOT"
+source "$REPO_ROOT/scripts/lib/project-config.sh"
 
-PROJECT_ROOT="$SCRIPT_DIR/.."
-
-PROJECTS=(
-  "eventstracker:eventstracker-postgres"
-  "runs-app:runs-app-postgres"
-)
+RABBIT_COMPOSE_FILE="$REPO_ROOT/rabbitmq-compose.yml"
+CONFIG_SERVER_DIR="$(get_config_server_dir)"
+CONFIG_SERVER_CONTAINER="$(get_config_server_container)"
+RABBIT_CONTAINER="$(get_rabbitmq_container)"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -46,15 +47,39 @@ done
 
 print_status() { echo -e "${GREEN}✓${NC} $1"; }
 print_info() { echo -e "${YELLOW}ℹ${NC} $1"; }
+print_warn() { echo -e "${YELLOW}⚠${NC} $1"; }
 print_error() { echo -e "${RED}✗${NC} $1"; }
 
-for entry in "${PROJECTS[@]}"; do
-  IFS=':' read -r project container <<< "$entry"
-  project_dir="$PROJECT_ROOT/$project"
+force_remove_container_if_exists() {
+  local container="$1"
+  if docker ps -a --filter "name=^${container}$" --format '{{.Names}}' | grep -q "^${container}$"; then
+    if [ "$REMOVE_VOLUMES" = true ]; then
+      docker rm -f -v "$container" >/dev/null 2>&1 || {
+        print_error "Failed to remove container $container"
+        return 1
+      }
+      print_status "Container removed with volumes: $container"
+    else
+      docker rm -f "$container" >/dev/null 2>&1 || {
+        print_error "Failed to remove container $container"
+        return 1
+      }
+      print_status "Container removed: $container"
+    fi
+  fi
+  return 0
+}
+
+stop_project_stack() {
+  local project="$1"
+  local project_dir
+  local container
+  project_dir="$(resolve_project_dir "$project")"
+  container="$(get_project_container "$project")"
 
   if [ ! -d "$project_dir" ]; then
     print_error "Missing project directory $project_dir"
-    exit 1
+    return 1
   fi
 
   print_info "Stopping $project..."
@@ -71,9 +96,58 @@ for entry in "${PROJECTS[@]}"; do
     fi
   else
     print_error "Failed to stop $project"
-    exit 1
+    return 1
   fi
 
+  # Ensure project DB container is stopped even when it was started from another compose file.
+  force_remove_container_if_exists "$container" || return 1
+
+  return 0
+}
+
+stop_config_server() {
+  if [ ! -f "$CONFIG_SERVER_DIR/docker-compose.yml" ]; then
+    print_info "Config server compose file not found ($CONFIG_SERVER_DIR/docker-compose.yml); skipping"
+    return
+  fi
+
+  print_info "Stopping config server stack..."
+  if (cd "$CONFIG_SERVER_DIR" && docker compose down); then
+    print_status "Config server stack stopped"
+  else
+    print_error "Failed to stop config server stack"
+    exit 1
+  fi
+}
+
+stop_rabbitmq() {
+  if [ ! -f "$RABBIT_COMPOSE_FILE" ]; then
+    print_info "RabbitMQ compose file not found ($RABBIT_COMPOSE_FILE); skipping"
+    return
+  fi
+  print_info "Stopping RabbitMQ..."
+  if docker compose -f "$RABBIT_COMPOSE_FILE" down >/dev/null 2>&1; then
+    print_status "RabbitMQ stopped"
+  else
+    print_error "Failed to stop RabbitMQ"
+    exit 1
+  fi
+}
+
+stop_config_server
+stop_rabbitmq
+
+for project in "${PROJECTS[@]}"; do
+  stop_project_stack "$project"
+done
+
+print_info "Container status summary:"
+for container in "$CONFIG_SERVER_CONTAINER" "$RABBIT_CONTAINER" "$(get_project_container eventstracker)" "$(get_project_container runs-app)"; do
+  if docker ps --filter "name=$container" --format '{{.Names}}' | grep -q "^$container$"; then
+    print_warn "still running: $container"
+  else
+    print_status "not running: $container"
+  fi
 done
 
 print_status "All projects stopped"

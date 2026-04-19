@@ -32,6 +32,12 @@ RABBIT_CONTAINER_NAME="sathishproject-rabbitmq"
 PROJECT_ROOT="$WORKSPACE_ROOT"
 source "$REPO_ROOT/scripts/lib/project-config.sh"
 
+RABBIT_CONTAINER_NAME="$(get_rabbitmq_container)"
+CONFIG_SERVER_CONTAINER="$(get_config_server_container)"
+CONFIG_SERVER_DIR="$(get_config_server_dir)"
+CONFIG_SERVER_ENV="$(get_config_server_env_file)"
+INFRA_DIR="$(get_infra_config_dir)"
+
 # Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -111,38 +117,42 @@ if ! docker ps > /dev/null 2>&1; then
   preflight_ok=false
 fi
 
-# jubilant-memory infra stack (prefer ~/IdeaProjects, fall back to WORKSPACE_ROOT)
-if [ -d "$HOME/IdeaProjects/jubilant-memory" ]; then
-  _INFRA_DIR="$HOME/IdeaProjects/jubilant-memory/config"
-else
-  _INFRA_DIR="$WORKSPACE_ROOT/jubilant-memory/config"
-fi
-if [ ! -f "$_INFRA_DIR/docker-compose.yml" ]; then
-  print_error "Missing $_INFRA_DIR/docker-compose.yml — clone jubilant-memory as a sibling of this repo"
+if [ ! -f "$INFRA_DIR/docker-compose.yml" ]; then
+  print_error "Missing $INFRA_DIR/docker-compose.yml — clone jubilant-memory as a sibling of this repo"
   preflight_ok=false
 else
   print_status "jubilant-memory/config found"
-  if [ ! -f "$_INFRA_DIR/.env" ]; then
-    print_error "Missing $_INFRA_DIR/.env"
-    print_info "Create it first: cp $_INFRA_DIR/.env.example $_INFRA_DIR/.env"
+  if [ ! -f "$INFRA_DIR/.env" ]; then
+    print_error "Missing $INFRA_DIR/.env"
+    print_info "Create it first: cp $INFRA_DIR/.env.example $INFRA_DIR/.env"
     preflight_ok=false
   else
     for _required in EVENTS_TRACKER_DB_USER EVENTS_TRACKER_DB_PASSWORD RABBITMQ_USERNAME RABBITMQ_PASSWORD; do
-      if ! grep -qE "^${_required}=" "$_INFRA_DIR/.env"; then
-        print_error "$_required missing in $_INFRA_DIR/.env"
+      if ! grep -qE "^${_required}=" "$INFRA_DIR/.env"; then
+        print_error "$_required missing in $INFRA_DIR/.env"
         preflight_ok=false
       fi
     done
   fi
 fi
 
+# config-server stack
+if [ ! -f "$CONFIG_SERVER_DIR/docker-compose.yml" ]; then
+  print_error "Missing $CONFIG_SERVER_DIR/docker-compose.yml"
+  preflight_ok=false
+else
+  print_status "sathishproject-config-server found"
+fi
+
+if [ ! -f "$CONFIG_SERVER_ENV" ]; then
+  print_error "Missing $CONFIG_SERVER_ENV"
+  print_info "Run: $SCRIPT_DIR/bootstrap-env.sh"
+  preflight_ok=false
+fi
+
 # Per-project dev-up.sh scripts
 for _p in "${PROJECTS[@]}"; do
-  if [ -d "$HOME/IdeaProjects/$_p" ]; then
-    _dir="$HOME/IdeaProjects/$_p"
-  else
-    _dir="$WORKSPACE_ROOT/$_p"
-  fi
+  _dir="$(resolve_project_dir "$_p")"
   if [ ! -f "$_dir/dev-up.sh" ]; then
     print_error "Missing $_dir/dev-up.sh"
     preflight_ok=false
@@ -157,6 +167,15 @@ echo ""
 # ─────────────────────────────────────────────────────────────────────────────
 
 start_rabbitmq() {
+  local rabbit_user rabbit_pass
+  rabbit_user=$(grep -E '^RABBITMQ_USERNAME=' "$INFRA_DIR/.env" | tail -n 1 | cut -d'=' -f2- || true)
+  rabbit_pass=$(grep -E '^RABBITMQ_PASSWORD=' "$INFRA_DIR/.env" | tail -n 1 | cut -d'=' -f2- || true)
+
+  if [ -z "$rabbit_user" ] || [ -z "$rabbit_pass" ]; then
+    print_error "RABBITMQ_USERNAME/RABBITMQ_PASSWORD missing in $INFRA_DIR/.env"
+    exit 1
+  fi
+
   if [ ! -f "$RABBIT_COMPOSE_FILE" ]; then
     print_info "RabbitMQ compose file not found ($RABBIT_COMPOSE_FILE); skipping broker startup"
     return
@@ -164,19 +183,16 @@ start_rabbitmq() {
 
   if docker ps --filter "name=$RABBIT_CONTAINER_NAME" --format '{{.Names}}' | grep -q "^$RABBIT_CONTAINER_NAME$"; then
     print_status "RabbitMQ already running"
-    return
-  fi
-
-  if docker ps -a --filter "name=$RABBIT_CONTAINER_NAME" --format '{{.Names}}' | grep -q "^$RABBIT_CONTAINER_NAME$"; then
+  elif docker ps -a --filter "name=$RABBIT_CONTAINER_NAME" --format '{{.Names}}' | grep -q "^$RABBIT_CONTAINER_NAME$"; then
     print_info "Starting existing RabbitMQ container..."
     docker start "$RABBIT_CONTAINER_NAME" >/dev/null 2>&1 || true
   else
     print_info "Starting RabbitMQ..."
-    docker compose -f "$RABBIT_COMPOSE_FILE" up -d
+    docker compose --env-file "$INFRA_DIR/.env" -f "$RABBIT_COMPOSE_FILE" up -d
   fi
 
   print_info "Starting RabbitMQ..."
-  docker compose -f "$RABBIT_COMPOSE_FILE" up -d >/dev/null 2>&1 || true
+  docker compose --env-file "$INFRA_DIR/.env" -f "$RABBIT_COMPOSE_FILE" up -d >/dev/null 2>&1 || true
 
   print_info "Waiting up to 30s for RabbitMQ health..."
   attempts=0
@@ -185,7 +201,7 @@ start_rabbitmq() {
     case "$status" in
       healthy|running)
         print_status "RabbitMQ is healthy"
-        return
+        break
         ;;
       starting|initializing)
         sleep 1
@@ -200,22 +216,69 @@ start_rabbitmq() {
     esac
     attempts=$((attempts + 1))
   done
-  print_error "RabbitMQ did not become healthy within 30s"
+  if [ $attempts -ge 30 ]; then
+    print_error "RabbitMQ did not become healthy within 30s"
+    exit 1
+  fi
+
+  print_info "Syncing RabbitMQ credentials for user '$rabbit_user'..."
+  if docker exec "$RABBIT_CONTAINER_NAME" rabbitmqctl list_users | awk '{print $1}' | grep -qx "$rabbit_user"; then
+    docker exec "$RABBIT_CONTAINER_NAME" rabbitmqctl change_password "$rabbit_user" "$rabbit_pass" >/dev/null
+  else
+    docker exec "$RABBIT_CONTAINER_NAME" rabbitmqctl add_user "$rabbit_user" "$rabbit_pass" >/dev/null
+  fi
+  docker exec "$RABBIT_CONTAINER_NAME" rabbitmqctl set_permissions -p / "$rabbit_user" ".*" ".*" ".*" >/dev/null
+
+  if docker exec "$RABBIT_CONTAINER_NAME" rabbitmqctl authenticate_user "$rabbit_user" "$rabbit_pass" >/dev/null 2>&1; then
+    print_status "RabbitMQ credentials synced and verified for '$rabbit_user'"
+  else
+    print_error "RabbitMQ credentials verification failed for '$rabbit_user'"
+    exit 1
+  fi
+}
+
+start_config_server() {
+  local config_user config_pass config_port
+  config_user=$(grep -E '^username=' "$CONFIG_SERVER_ENV" | tail -n 1 | cut -d'=' -f2- || true)
+  config_pass=$(grep -E '^pass=' "$CONFIG_SERVER_ENV" | tail -n 1 | cut -d'=' -f2- || true)
+  config_port=$(grep -E '^APP_PORT=' "$CONFIG_SERVER_ENV" | tail -n 1 | cut -d'=' -f2- || true)
+
+  if [ -z "$config_user" ] || [ -z "$config_pass" ]; then
+    print_error "username/pass missing in $CONFIG_SERVER_ENV"
+    exit 1
+  fi
+  [ -n "$config_port" ] || config_port="8888"
+
+  print_header "CONFIG-SERVER"
+  print_info "Force-recreating config-server to apply current .env"
+  (cd "$CONFIG_SERVER_DIR" && docker compose --env-file "$CONFIG_SERVER_ENV" up -d --force-recreate config-server)
+
+  print_info "Waiting up to 60s for config-server readiness..."
+  local attempts=0
+  until [ $attempts -ge 60 ]; do
+    if curl -sf -u "$config_user:$config_pass" "http://localhost:${config_port}/eventstracker/local" >/dev/null 2>&1; then
+      print_status "Config server is ready on port $config_port"
+      return
+    fi
+    attempts=$((attempts + 1))
+    sleep 1
+  done
+
+  print_error "Config server did not become ready within 60s"
+  docker logs --tail 60 "$CONFIG_SERVER_CONTAINER" 2>/dev/null || true
+  exit 1
 }
 
 if [ "$CLOUD_MODE" = false ]; then
+  start_config_server
   start_rabbitmq
 else
-  print_info "Cloud mode detected -- skipping local RabbitMQ startup"
+  print_info "Cloud mode detected -- skipping local config-server and RabbitMQ startup"
 fi
 
 for project in "${PROJECTS[@]}"; do
   # Try machine-specific IdeaProjects first, then fall back to WORKSPACE_ROOT
-  if [ -d "$HOME/IdeaProjects/$project" ]; then
-    project_dir="$HOME/IdeaProjects/$project"
-  else
-    project_dir="$WORKSPACE_ROOT/$project"
-  fi
+  project_dir="$(resolve_project_dir "$project")"
 
   script="$project_dir/dev-up.sh"
 
@@ -326,10 +389,13 @@ fi
 
 print_header "Startup Complete"
 
+EVENTSTRACKER_DIR="$(resolve_project_dir eventstracker)"
+RUNS_APP_DIR="$(resolve_project_dir runs-app)"
+
 cat <<EON
 Next steps:
-  1. Start EventTracker:     (cd "$WORKSPACE_ROOT/eventstracker" && ./eventtracker.sh start)
-  2. Start Runs App:         (cd "$WORKSPACE_ROOT/runs-app" && mvn spring-boot:run)
+  1. Start EventTracker:     (cd "$EVENTSTRACKER_DIR" && ./eventtracker.sh start)
+  2. Start Runs App:         (cd "$RUNS_APP_DIR" && mvn spring-boot:run)
 
 Useful commands:
   scripts/local/multi-dev-up.sh --reset     # reset all containers

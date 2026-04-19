@@ -1,50 +1,110 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Test script to validate multi-dev-up.sh idempotency fix
-# This simulates the error condition without running the full script
+# Idempotency and cross-machine readiness checks for local orchestration scripts.
+# Default mode validates path resolution + required files.
+# Use --full to run up/verify/down cycles.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-PROJECT_ROOT="$(cd "$REPO_ROOT/.." && pwd)"
+WORKSPACE_ROOT="$(cd "$REPO_ROOT/.." && pwd)"
+PROJECT_ROOT="$WORKSPACE_ROOT"
 
-echo "Testing idempotency fix..."
-echo "REPO_ROOT: $REPO_ROOT"
-echo "PROJECT_ROOT: $PROJECT_ROOT"
-echo ""
+FULL_MODE=false
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --full)
+      FULL_MODE=true
+      shift
+      ;;
+    --help)
+      cat <<'EOF'
+Usage: ./test-idempotency.sh [--full]
+
+  default  Validate cross-machine directory resolution and required script presence.
+  --full   Run multi-dev-up twice, verify, then multi-dev-down and verify expected shutdown.
+EOF
+      exit 0
+      ;;
+    *)
+      echo "Unknown option: $1"
+      exit 1
+      ;;
+  esac
+done
+
+echo "Testing orchestration idempotency and machine portability..."
+echo "REPO_ROOT:      $REPO_ROOT"
+echo "WORKSPACE_ROOT: $WORKSPACE_ROOT"
+echo
 
 # Source the config library
 source "$REPO_ROOT/scripts/lib/project-config.sh"
 
-# Test the function that was causing the error
-test_password_env_var() {
-  local project="$1"
-  echo "Testing project: $project"
-  
-  # This is what the fixed code does
-  password_env_var="$(get_project_password_env_var "$project")"
-  echo "  ✓ Password env var: $password_env_var"
-  
-  # Test all helper functions
-  db_user="$(get_project_db_user "$project")"
-  echo "  ✓ DB user: $db_user"
-  
-  db_name="$(get_project_db_name "$project")"
-  echo "  ✓ DB name: $db_name"
-  
-  port="$(get_project_port "$project")"
-  echo "  ✓ Port: $port"
-  
-  container="$(get_project_container "$project")"
-  echo "  ✓ Container: $container"
-  
-  echo ""
+check_path_resolution() {
+  local name="$1"
+  local resolved="$2"
+  local source_location="workspace"
+
+  if [[ "$resolved" == "$HOME/IdeaProjects/"* ]]; then
+    source_location="home"
+  fi
+
+  if [ -d "$resolved" ]; then
+    echo "  ✓ $name -> $resolved ($source_location)"
+  else
+    echo "  ✗ $name missing at $resolved"
+    return 1
+  fi
 }
 
-# Test both projects
+echo "[1/3] Checking shared directory resolution"
+check_path_resolution "jubilant-memory/config" "$(get_infra_config_dir)"
+check_path_resolution "sathishproject-config-server" "$(get_config_server_dir)"
+
 for project in "${PROJECTS[@]}"; do
-  test_password_env_var "$project"
+  check_path_resolution "$project" "$(resolve_project_dir "$project")"
+  echo "    - db_user: $(get_project_db_user "$project")"
+  echo "    - db_name: $(get_project_db_name "$project")"
+  echo "    - port:    $(get_project_port "$project")"
+  echo "    - cont:    $(get_project_container "$project")"
 done
 
-echo "✓ All tests passed - no unbound variable errors!"
-echo "✓ The fix will work on your laptop"
+echo
+echo "[2/3] Checking required scripts"
+for script in "$REPO_ROOT/scripts/local/bootstrap-env.sh" "$REPO_ROOT/scripts/local/multi-dev-up.sh" "$REPO_ROOT/scripts/local/multi-dev-down.sh" "$REPO_ROOT/scripts/local/multi-dev-verify.sh"; do
+  if [ -x "$script" ]; then
+    echo "  ✓ executable: $script"
+  else
+    echo "  ✗ not executable: $script"
+    exit 1
+  fi
+done
+
+echo
+echo "[3/3] Idempotency checks"
+if [ "$FULL_MODE" = true ]; then
+  echo "  -> Running multi-dev-up (pass 1)"
+  "$REPO_ROOT/scripts/local/multi-dev-up.sh"
+
+  echo "  -> Running multi-dev-up (pass 2, idempotency)"
+  "$REPO_ROOT/scripts/local/multi-dev-up.sh"
+
+  echo "  -> Running verify"
+  "$REPO_ROOT/scripts/local/multi-dev-verify.sh"
+
+  echo "  -> Bringing everything down"
+  "$REPO_ROOT/scripts/local/multi-dev-down.sh"
+
+  echo "  -> Verifying shutdown state"
+  if "$REPO_ROOT/scripts/local/multi-dev-verify.sh" >/dev/null 2>&1; then
+    echo "  ✗ verify unexpectedly passed after shutdown"
+    exit 1
+  fi
+  echo "  ✓ verify fails after shutdown as expected"
+else
+  echo "  ✓ Skipped full cycle (run with --full for runtime idempotency test)"
+fi
+
+echo
+echo "✓ Idempotency harness checks passed"

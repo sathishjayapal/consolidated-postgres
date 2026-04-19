@@ -17,6 +17,26 @@ resolve_project_dir() {
   fi
 }
 
+get_infra_config_dir() {
+  echo "$(resolve_project_dir jubilant-memory)/config"
+}
+
+get_config_server_dir() {
+  resolve_project_dir sathishproject-config-server
+}
+
+get_config_server_env_file() {
+  echo "$(get_config_server_dir)/.env"
+}
+
+get_config_server_container() {
+  echo "sathish-config-server"
+}
+
+get_rabbitmq_container() {
+  echo "sathishproject-rabbitmq"
+}
+
 get_project_db_user() {
   local project="$1"
   local project_dir
