@@ -45,7 +45,7 @@ get_project_db_user() {
   local key default_user
   case "$project" in
     eventstracker) key="EVENTS_TRACKER_DB_USER"; default_user="" ;;
-    runs-app)      key="DB_USERNAME";            default_user="postgres" ;;
+    runs-app)      key="JDBC_DATABASE_USERNAME"; default_user="" ;;
     *)             return 1 ;;
   esac
   # Try project .env first
