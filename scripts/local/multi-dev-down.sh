@@ -142,7 +142,13 @@ for project in "${PROJECTS[@]}"; do
 done
 
 print_info "Container status summary:"
-for container in "$CONFIG_SERVER_CONTAINER" "$RABBIT_CONTAINER" "$(get_project_container eventstracker)" "$(get_project_container runs-app)"; do
+# Build container list dynamically from PROJECTS array
+containers=("$CONFIG_SERVER_CONTAINER" "$RABBIT_CONTAINER")
+for project in "${PROJECTS[@]}"; do
+  containers+=("$(get_project_container "$project")")
+done
+
+for container in "${containers[@]}"; do
   if docker ps --filter "name=$container" --format '{{.Names}}' | grep -q "^$container$"; then
     print_warn "still running: $container"
   else

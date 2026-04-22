@@ -5,7 +5,31 @@
 
 : "${PROJECT_ROOT:?PROJECT_ROOT must be set before sourcing project-config.sh}"
 
-PROJECTS=( "eventstracker" "runs-app" )
+# Load projects from centralized projects.txt file
+_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+_PROJECTS_FILE="$(cd "$_SCRIPT_DIR/../.." && pwd)/projects.txt"
+
+if [ ! -f "$_PROJECTS_FILE" ]; then
+  echo "ERROR: projects.txt not found at $_PROJECTS_FILE" >&2
+  exit 1
+fi
+
+# Read projects from file, ignoring comments and empty lines
+PROJECTS=()
+while IFS= read -r line; do
+  # Skip comments and empty lines
+  [[ "$line" =~ ^[[:space:]]*# ]] && continue
+  [[ -z "${line// }" ]] && continue
+  # Trim whitespace and add to array
+  line="${line#"${line%%[![:space:]]*}"}"  # trim leading
+  line="${line%"${line##*[![:space:]]}"}"  # trim trailing
+  PROJECTS+=("$line")
+done < "$_PROJECTS_FILE"
+
+if [ ${#PROJECTS[@]} -eq 0 ]; then
+  echo "ERROR: No projects defined in $_PROJECTS_FILE" >&2
+  exit 1
+fi
 
 # Resolve a project directory: prefer ~/IdeaProjects/<name>, fall back to PROJECT_ROOT/<name>
 resolve_project_dir() {
@@ -44,9 +68,10 @@ get_project_db_user() {
   local env_file="$project_dir/.env"
   local key default_user
   case "$project" in
-    eventstracker) key="EVENTS_TRACKER_DB_USER"; default_user="" ;;
-    runs-app)      key="JDBC_DATABASE_USERNAME"; default_user="" ;;
-    *)             return 1 ;;
+    eventstracker)     key="EVENTS_TRACKER_DB_USER"; default_user="" ;;
+    runs-app)          key="JDBC_DATABASE_USERNAME"; default_user="" ;;
+    runs-ai-analyzer)  key="JDBC_DATABASE_USERNAME"; default_user="" ;;
+    *)                 return 1 ;;
   esac
   # Try project .env first
   if [ -f "$env_file" ]; then
@@ -81,49 +106,55 @@ get_project_db_user() {
 
 get_project_db_name() {
   case "$1" in
-    eventstracker) echo "event-service" ;;   # jubilant-memory POSTGRES_DB default
-    runs-app) echo "runsapp_db" ;;
-    *) return 1 ;;
+    eventstracker)    echo "event-service" ;;   # jubilant-memory POSTGRES_DB default
+    runs-app)         echo "runsapp_db" ;;
+    runs-ai-analyzer) echo "runs-ai-analyzer" ;;
+    *)                return 1 ;;
   esac
 }
 
 get_project_port() {
   case "$1" in
-    eventstracker) echo "6433" ;;   # jubilant-memory docker-compose host port
-    runs-app) echo "5443" ;;
-    *) return 1 ;;
+    eventstracker)    echo "6433" ;;   # jubilant-memory docker-compose host port
+    runs-app)         echo "5443" ;;
+    runs-ai-analyzer) echo "5444" ;;
+    *)                return 1 ;;
   esac
 }
 
 get_project_container() {
   case "$1" in
-    eventstracker) echo "event-service-db" ;;   # jubilant-memory container_name
-    runs-app) echo "runs-app-postgres" ;;
-    *) return 1 ;;
+    eventstracker)    echo "event-service-db" ;;   # jubilant-memory container_name
+    runs-app)         echo "runs-app-postgres" ;;
+    runs-ai-analyzer) echo "runs-ai-analyzer-db" ;;
+    *)                return 1 ;;
   esac
 }
 
 get_project_password_env_var() {
   case "$1" in
-    eventstracker) echo "EVENTS_TRACKER_DB_PASSWORD" ;;
-    runs-app) echo "RUNS_APP_DB_PASSWORD" ;;
-    *) return 1 ;;
+    eventstracker)    echo "EVENTS_TRACKER_DB_PASSWORD" ;;
+    runs-app)         echo "RUNS_APP_DB_PASSWORD" ;;
+    runs-ai-analyzer) echo "RUNS_AI_ANALYZER_DB_PASSWORD" ;;
+    *)                return 1 ;;
   esac
 }
 
 get_project_env_password_key() {
   case "$1" in
-    eventstracker) echo "EVENTS_TRACKER_DB_PASSWORD" ;;
-    runs-app) echo "JDBC_DATABASE_PASSWORD" ;;
-    *) return 1 ;;
+    eventstracker)    echo "EVENTS_TRACKER_DB_PASSWORD" ;;
+    runs-app)         echo "JDBC_DATABASE_PASSWORD" ;;
+    runs-ai-analyzer) echo "JDBC_DATABASE_PASSWORD" ;;
+    *)                return 1 ;;
   esac
 }
 
 get_project_seed_table() {
   case "$1" in
-    eventstracker) echo "domain" ;;
-    runs-app) echo "run_app_user" ;;
-    *) return 1 ;;
+    eventstracker)    echo "domain" ;;
+    runs-app)         echo "run_app_user" ;;
+    runs-ai-analyzer) echo "rag_cache" ;;
+    *)                return 1 ;;
   esac
 }
 

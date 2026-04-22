@@ -15,9 +15,8 @@ set -euo pipefail
 #   3. Creates/updates .env files via existing project scripts
 #   4. Verifies seeded data (configurable checks)
 #
-# Projects covered:
-#   - eventstracker (port 6433, jubilant-memory central stack)
-#   - runs-app (port 5443)
+# Projects are defined in: ../../projects.txt
+# Add new projects there - they will be automatically included.
 #################################################################
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -194,30 +193,27 @@ start_rabbitmq() {
   print_info "Starting RabbitMQ..."
   docker compose --env-file "$INFRA_DIR/.env" -f "$RABBIT_COMPOSE_FILE" up -d >/dev/null 2>&1 || true
 
-  print_info "Waiting up to 30s for RabbitMQ health..."
+  print_info "Waiting up to 60s for RabbitMQ health..."
   attempts=0
-  until [ $attempts -ge 30 ]; do
+  until [ $attempts -ge 60 ]; do
     status=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$RABBIT_CONTAINER_NAME" 2>/dev/null || echo "unknown")
     case "$status" in
       healthy|running)
         print_status "RabbitMQ is healthy"
         break
         ;;
-      starting|initializing)
+      starting|initializing|"unknown"|"")
         sleep 1
-        ;;
-      "unknown"|"")
-        sleep 1
+        attempts=$((attempts + 1))
         ;;
       *)
         print_error "RabbitMQ health status: $status"
-        break
+        exit 1
         ;;
     esac
-    attempts=$((attempts + 1))
   done
-  if [ $attempts -ge 30 ]; then
-    print_error "RabbitMQ did not become healthy within 30s"
+  if [ $attempts -ge 60 ]; then
+    print_error "RabbitMQ did not become healthy within 60s"
     exit 1
   fi
 

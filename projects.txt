@@ -1,0 +1,7 @@
+# Managed Projects
+# One project name per line. Lines starting with # are ignored.
+# Add new projects here - they will be automatically included in all orchestration scripts.
+
+eventstracker
+runs-app
+runs-ai-analyzer
