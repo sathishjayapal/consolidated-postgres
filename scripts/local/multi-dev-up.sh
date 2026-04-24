@@ -387,15 +387,32 @@ print_header "Startup Complete"
 
 EVENTSTRACKER_DIR="$(resolve_project_dir eventstracker)"
 RUNS_APP_DIR="$(resolve_project_dir runs-app)"
+RUNS_AI_ANALYZER_DIR="$(resolve_project_dir runs-ai-analyzer)"
 
 cat <<EON
-Next steps:
-  1. Start EventTracker:     (cd "$EVENTSTRACKER_DIR" && ./eventtracker.sh start)
-  2. Start Runs App:         (cd "$RUNS_APP_DIR" && mvn spring-boot:run)
+Next steps - START IN THIS ORDER (CRITICAL for event-driven integration):
+  
+  1. Start EventTracker FIRST (provisions RabbitMQ queues):
+     (cd "$EVENTSTRACKER_DIR" && ./mvnw spring-boot:run)
+     Wait for: "Declared queue: q.sathishprojects.garmin.ops.events"
+  
+  2. Start Runs App (validates queues exist):
+     (cd "$RUNS_APP_DIR" && ./mvnw spring-boot:run)
+     Wait for: "Validated Garmin OPS queue exists"
+  
+  3. Start Runs AI Analyzer (consumes from queues):
+     (cd "$RUNS_AI_ANALYZER_DIR" && ./mvnw spring-boot:run)
+     Wait for: "RabbitMQ listener factory configured"
+
+⚠️  IMPORTANT: EventTracker MUST start first to provision RabbitMQ queues!
+    If you start services out of order, runs-app will fail with "queue not found"
 
 Useful commands:
   scripts/local/multi-dev-up.sh --reset     # reset all containers
   scripts/local/multi-dev-down.sh           # stop containers (preserve data)
   scripts/local/multi-dev-down.sh --volumes # stop and delete data
   scripts/local/multi-dev-verify.sh         # verify connectivity & seed data
+  
+Troubleshooting:
+  cd "$RUNS_AI_ANALYZER_DIR" && ./diagnose_integration.sh
 EON
