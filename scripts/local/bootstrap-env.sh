@@ -90,10 +90,16 @@ set_if_blank_or_placeholder "$INFRA_ENV" "EVENTS_TRACKER_DB_NAME" "event-service
 set_if_blank_or_placeholder "$INFRA_ENV" "EVENTS_TRACKER_DB_USER" "eventsvc_local"
 set_if_blank_or_placeholder "$INFRA_ENV" "EVENTS_TRACKER_DB_PASSWORD" "$(rand_secret)"
 
+set_if_blank_or_placeholder "$INFRA_ENV" "RUNS_APP_DB_NAME" "runsapp_db"
+set_if_blank_or_placeholder "$INFRA_ENV" "RUNS_APP_DB_USER" "runsapp_local"
+set_if_blank_or_placeholder "$INFRA_ENV" "RUNS_APP_DB_PASSWORD" "$(rand_secret)"
+
+set_if_blank_or_placeholder "$INFRA_ENV" "RUNS_AI_ANALYZER_DB_NAME" "runs_ai_analyzer_db"
+set_if_blank_or_placeholder "$INFRA_ENV" "RUNS_AI_ANALYZER_DB_USER" "runsai_local"
+set_if_blank_or_placeholder "$INFRA_ENV" "RUNS_AI_ANALYZER_DB_PASSWORD" "$(rand_secret)"
+
 set_if_blank_or_placeholder "$INFRA_ENV" "RABBITMQ_USERNAME" "rabbit_local"
 set_if_blank_or_placeholder "$INFRA_ENV" "RABBITMQ_PASSWORD" "$(rand_secret)"
-
-set_if_blank_or_placeholder "$INFRA_ENV" "RUNS_APP_DB_NAME" "runs-app"
 set_if_blank_or_placeholder "$INFRA_ENV" "MYTRACKER_DB_NAME" "postgres"
 set_if_blank_or_placeholder "$INFRA_ENV" "SHEDLOCK_DB_NAME" "postgres"
 
