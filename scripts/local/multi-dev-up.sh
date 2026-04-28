@@ -126,7 +126,7 @@ else
     print_info "Create it first: cp $INFRA_DIR/.env.example $INFRA_DIR/.env"
     preflight_ok=false
   else
-    for _required in EVENTS_TRACKER_DB_USER EVENTS_TRACKER_DB_PASSWORD RABBITMQ_USERNAME RABBITMQ_PASSWORD; do
+    for _required in EVENTS_TRACKER_DB_USER EVENTS_TRACKER_DB_PASSWORD RUNS_AI_ANALYZER_DB_USER RUNS_AI_ANALYZER_DB_PASSWORD RABBITMQ_USERNAME RABBITMQ_PASSWORD; do
       if ! grep -qE "^${_required}=" "$INFRA_DIR/.env"; then
         print_error "$_required missing in $INFRA_DIR/.env"
         preflight_ok=false

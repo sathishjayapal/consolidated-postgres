@@ -70,7 +70,7 @@ get_project_db_user() {
   case "$project" in
     eventstracker)     key="EVENTS_TRACKER_DB_USER"; default_user="" ;;
     runs-app)          key="JDBC_DATABASE_USERNAME"; default_user="" ;;
-    runs-ai-analyzer)  key="JDBC_DATABASE_USERNAME"; default_user="" ;;
+    runs-ai-analyzer)  key="RUNS_AI_ANALYZER_DB_USER"; default_user="" ;;
     *)                 return 1 ;;
   esac
   # Try project .env first
@@ -80,6 +80,15 @@ get_project_db_user() {
     if [ -n "$value" ]; then
       echo "$value"
       return 0
+    fi
+    # runs-ai-analyzer: backward-compatible fallback to JDBC_DATABASE_USERNAME
+    if [ "$project" = "runs-ai-analyzer" ]; then
+      local jdbc_value
+      jdbc_value=$(grep -E "^JDBC_DATABASE_USERNAME=" "$env_file" | tail -n 1 | cut -d'=' -f2-)
+      if [ -n "$jdbc_value" ]; then
+        echo "$jdbc_value"
+        return 0
+      fi
     fi
   fi
   # eventstracker: also try infra .env (golden source)
@@ -105,10 +114,33 @@ get_project_db_user() {
 }
 
 get_project_db_name() {
-  case "$1" in
+  local project="$1"
+  case "$project" in
     eventstracker)    echo "event-service" ;;   # jubilant-memory POSTGRES_DB default
     runs-app)         echo "runsapp_db" ;;
-    runs-ai-analyzer) echo "runs-ai-analyzer" ;;
+    runs-ai-analyzer)
+      local project_dir env_file value
+      project_dir=$(resolve_project_dir "$project")
+      env_file="$project_dir/.env"
+      if [ -f "$env_file" ]; then
+        # Prefer explicit DB URL, then explicit DB name.
+        value=$(grep -E "^RUNS_AI_ANALYZER_DB_URL=" "$env_file" | tail -n 1 | cut -d'=' -f2-)
+        if [ -n "$value" ]; then
+          value="${value##*/}"
+          value="${value%%\?*}"
+          if [ -n "$value" ]; then
+            echo "$value"
+            return 0
+          fi
+        fi
+        value=$(grep -E "^RUNS_AI_ANALYZER_DB_NAME=" "$env_file" | tail -n 1 | cut -d'=' -f2-)
+        if [ -n "$value" ]; then
+          echo "$value"
+          return 0
+        fi
+      fi
+      echo "runs_ai_analyzer_db"
+      ;;
     *)                return 1 ;;
   esac
 }
@@ -144,7 +176,7 @@ get_project_env_password_key() {
   case "$1" in
     eventstracker)    echo "EVENTS_TRACKER_DB_PASSWORD" ;;
     runs-app)         echo "JDBC_DATABASE_PASSWORD" ;;
-    runs-ai-analyzer) echo "JDBC_DATABASE_PASSWORD" ;;
+    runs-ai-analyzer) echo "RUNS_AI_ANALYZER_DB_PASSWORD" ;;
     *)                return 1 ;;
   esac
 }
