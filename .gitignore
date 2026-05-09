@@ -52,4 +52,4 @@ backups/
 error.text
 
 # Google Drive
-.tmp.driveupload/
+.tmp.driveupload/*
