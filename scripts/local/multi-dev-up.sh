@@ -10,6 +10,7 @@ set -euo pipefail
 #   --help      Show this help message
 #
 # What it does:
+
 #   1. Starts each project's PostgreSQL container
 #   2. Waits for databases to be ready
 #   3. Creates/updates .env files via existing project scripts

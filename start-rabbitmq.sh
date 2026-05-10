@@ -5,7 +5,17 @@
 
 set -e  # Exit on error
 
-COMPOSE_FILE="/Users/sathishjayapal/IdeaProjects/consolidated-postgres/rabbitmq-compose.yml"
+# Resolve compose file relative to this script so it works on any machine/folder.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -f "$SCRIPT_DIR/rabbitmq-compose.yml" ]; then
+    COMPOSE_FILE="$SCRIPT_DIR/rabbitmq-compose.yml"
+elif [ -f "$SCRIPT_DIR/rabbit-compose.yml" ]; then
+    COMPOSE_FILE="$SCRIPT_DIR/rabbit-compose.yml"
+else
+    echo "❌ Could not find rabbit compose file in: $SCRIPT_DIR"
+    echo "Expected one of: rabbitmq-compose.yml or rabbit-compose.yml"
+    exit 1
+fi
 PROJECT_NAME="consolidated-postgres"
 CONTAINER_NAME="sathishproject-rabbitmq"
 
