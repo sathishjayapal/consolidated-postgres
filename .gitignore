@@ -51,5 +51,8 @@ backups/
 # Scratch/temp files
 error.text
 
+# Test tooling (bats auto-installed by tests/run-tests.sh)
+tests/vendor/
+
 # Google Drive
 .tmp.driveupload/*
