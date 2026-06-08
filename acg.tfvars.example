@@ -1,0 +1,18 @@
+# ACG Azure sandbox credentials — copy to acg.tfvars and fill in values.
+# Get these from your ACG lab credentials page (the "Credentials" tab).
+# acg.tfvars is gitignored — never commit real credentials.
+
+subscription_id = "PASTE_FROM_ACG_LAB"
+tenant_id       = "PASTE_FROM_ACG_LAB"
+rg_name         = "PASTE_FROM_ACG_LAB"   # e.g. "1-abc123de-playground-sandbox"
+
+# Password you choose for the PostgreSQL admin user.
+# Must meet Azure complexity rules: min 8 chars, upper+lower+digit+special.
+pg_admin_password = "ACGdev$2025!Pg"
+
+# These are used by non-postgres modules — leave as-is when only
+# running acg-start.sh (which targets module.flexipostgresmodule only).
+prefix           = "test"
+environment      = "dev"
+primary_location = "East US"
+main_group_name  = "sathisprj1"
