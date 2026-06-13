@@ -1,0 +1,54 @@
+@startuml
+title consolidated-postgres -- orchestration map (auto-generated)
+skinparam componentStyle rectangle
+left to right direction
+
+package "Local Orchestration" {
+  [multi-dev-up.sh] as multi_dev_up_sh
+  [multi-dev-down.sh] as multi_dev_down_sh
+  [multi-dev-verify.sh] as multi_dev_verify_sh
+  [start-all-services.sh] as start_all_services_sh
+  [stop-all-services.sh] as stop_all_services_sh
+}
+
+package "Cloud Orchestration" {
+  [DigitalOcean (cloud-start.sh / cloud-stop.sh)] as DigitalOcean
+  [Azure ACG (acg-start.sh / acg-stop.sh)] as Azure_ACG
+  [AWS ACG (acg-aws-start.sh / acg-aws-stop.sh)] as AWS_ACG
+}
+
+package "RabbitMQ Management" {
+  [rabbitmq-manager.sh] as rabbitmq_manager_sh
+  [start-rabbitmq.sh] as start_rabbitmq_sh
+  [stop-rabbitmq.sh] as stop_rabbitmq_sh
+}
+
+package "Managed Projects (projects.txt)" {
+  [eventstracker] as eventstracker
+  [runs-app] as runs_app
+  [runs-ai-analyzer] as runs_ai_analyzer
+}
+
+database "Per-project PostgreSQL" as PG
+queue "RabbitMQ" as MQ
+
+multi_dev_up_sh --> eventstracker
+multi_dev_up_sh --> runs_app
+multi_dev_up_sh --> runs_ai_analyzer
+multi_dev_up_sh --> PG
+multi_dev_up_sh --> MQ
+start_all_services_sh --> eventstracker
+start_all_services_sh --> runs_app
+start_all_services_sh --> runs_ai_analyzer
+start_all_services_sh --> PG
+start_all_services_sh --> MQ
+DigitalOcean --> PG : provisions
+Azure_ACG --> PG : provisions
+AWS_ACG --> PG : provisions
+rabbitmq_manager_sh --> MQ
+start_rabbitmq_sh --> MQ
+stop_rabbitmq_sh --> MQ
+eventstracker ..> PG : reads/writes
+runs_app ..> PG : reads/writes
+runs_ai_analyzer ..> PG : reads/writes
+@enduml
