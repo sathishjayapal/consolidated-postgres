@@ -59,3 +59,4 @@ tests/vendor/
 # Google Drive
 .tmp.driveupload/*
 .ACG_AWS_STATUS
+/.tunnel.pid
