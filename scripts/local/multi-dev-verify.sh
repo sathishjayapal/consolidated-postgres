@@ -67,6 +67,11 @@ if ! command -v psql >/dev/null 2>&1; then
   print_warn "psql not found locally; using container-based PostgreSQL checks"
 fi
 
+# Projects without a dev-up.sh are VM/ACG-managed — local checks don't apply
+project_is_local() {
+  [ -f "$(resolve_project_dir "$1")/dev-up.sh" ]
+}
+
 if ! docker ps >/dev/null 2>&1; then
   print_error "Docker daemon is not running"
   exit 1
@@ -89,6 +94,7 @@ else
   }
 
   for project in "${PROJECTS[@]}"; do
+    project_is_local "$project" || { print_warn "$project is VM/ACG-managed — skipping container check"; continue; }
     check_container "$(get_project_container "$project")"
   done
   check_container "$RABBIT_CONTAINER"
@@ -130,6 +136,7 @@ else
   }
 
   for project in "${PROJECTS[@]}"; do
+    project_is_local "$project" || { print_warn "$project is VM/ACG-managed — skipping DB reachability check"; continue; }
     port=$(get_project_port "$project")
     db=$(get_project_db_name "$project")
     user=$(get_project_db_user "$project")
@@ -163,6 +170,11 @@ else
 
   print_header "Schema & seed checks"
   for project in "${PROJECTS[@]}"; do
+    project_is_local "$project" || { print_warn "$project is VM/ACG-managed — skipping seed check"; continue; }
+    if ! get_project_seed_table "$project" >/dev/null 2>&1; then
+      print_warn "No seed table configured for $project — skipping seed check"
+      continue
+    fi
     password=$(get_project_password "$project" || true)
     if [ -z "$password" ]; then
       env_var=$(get_project_password_env_var "$project")

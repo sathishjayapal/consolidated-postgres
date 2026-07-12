@@ -66,6 +66,8 @@ PG_PASS=$(terraform output -raw pg_admin_password 2>/dev/null || echo "")
 DB_ET=$(terraform output -raw db_name_eventstracker 2>/dev/null || echo "event-service")
 DB_RA=$(terraform output -raw db_name_runsapp 2>/dev/null || echo "runsapp_db")
 DB_AI=$(terraform output -raw db_name_runsai 2>/dev/null || echo "runs_ai_analyzer_db")
+DB_GC=$(terraform output -raw db_name_githubcleaner 2>/dev/null || echo "my-github-cleaner")
+DB_DC=$(terraform output -raw db_name_dbcleaner 2>/dev/null || echo "dbcleaner")
 
 if [ -z "$PG_HOST" ] || [ -z "$PG_USER" ] || [ -z "$PG_PASS" ]; then
   print_error "Cannot read Terraform outputs. Infrastructure may already be destroyed."
@@ -80,7 +82,7 @@ if [ -z "$PG_HOST" ] || [ -z "$PG_USER" ] || [ -z "$PG_PASS" ]; then
 fi
 
 print_status "Host: $PG_HOST:$PG_PORT"
-print_status "Databases: $DB_ET | $DB_RA | $DB_AI"
+print_status "Databases: $DB_ET | $DB_RA | $DB_AI | $DB_GC | $DB_DC"
 
 # ── Export ────────────────────────────────────────────────────────────────────
 print_section "Exporting Data (Step 1/3)"
@@ -111,6 +113,8 @@ dump_db() {
 dump_db "$DB_ET" "eventstracker"
 dump_db "$DB_RA" "runsapp"
 dump_db "$DB_AI" "runsai"
+dump_db "$DB_GC" "githubcleaner"
+dump_db "$DB_DC" "dbcleaner"
 
 # Write restore instructions
 cat > "$BACKUP_DIR/RESTORE.md" << EOF
@@ -120,6 +124,8 @@ cat > "$BACKUP_DIR/RESTORE.md" << EOF
 - eventstracker.sql  → event-service
 - runsapp.sql        → runsapp_db
 - runsai.sql         → runs_ai_analyzer_db
+- githubcleaner.sql  → my-github-cleaner
+- dbcleaner.sql      → dbcleaner
 
 ## To restore
 1. \`./acg-start.sh\`  — recreate infrastructure
@@ -129,6 +135,8 @@ cat > "$BACKUP_DIR/RESTORE.md" << EOF
 PGPASSWORD=\$PG_PASS psql -h \$PG_HOST -p \$PG_PORT -U \$PG_USER -d event-service < eventstracker.sql
 PGPASSWORD=\$PG_PASS psql -h \$PG_HOST -p \$PG_PORT -U \$PG_USER -d runsapp_db    < runsapp.sql
 PGPASSWORD=\$PG_PASS psql -h \$PG_HOST -p \$PG_PORT -U \$PG_USER -d runs_ai_analyzer_db < runsai.sql
+PGPASSWORD=\$PG_PASS psql -h \$PG_HOST -p \$PG_PORT -U \$PG_USER -d "my-github-cleaner" < githubcleaner.sql
+PGPASSWORD=\$PG_PASS psql -h \$PG_HOST -p \$PG_PORT -U \$PG_USER -d dbcleaner < dbcleaner.sql
 \`\`\`
 Note: runs-ai-analyzer Flyway migrations enable the vector extension.
 Run the Spring app once before restoring runsai.sql if the extension isn't present.

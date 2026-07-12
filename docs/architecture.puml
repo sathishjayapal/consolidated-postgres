@@ -27,6 +27,8 @@ package "Managed Projects (projects.txt)" {
   [eventstracker] as eventstracker
   [runs-app] as runs_app
   [runs-ai-analyzer] as runs_ai_analyzer
+  [verbose-barnacle] as verbose_barnacle
+  [dbcleaner] as dbcleaner
 }
 
 database "Per-project PostgreSQL" as PG
@@ -35,11 +37,15 @@ queue "RabbitMQ" as MQ
 multi_dev_up_sh --> eventstracker
 multi_dev_up_sh --> runs_app
 multi_dev_up_sh --> runs_ai_analyzer
+multi_dev_up_sh --> verbose_barnacle
+multi_dev_up_sh --> dbcleaner
 multi_dev_up_sh --> PG
 multi_dev_up_sh --> MQ
 start_all_services_sh --> eventstracker
 start_all_services_sh --> runs_app
 start_all_services_sh --> runs_ai_analyzer
+start_all_services_sh --> verbose_barnacle
+start_all_services_sh --> dbcleaner
 start_all_services_sh --> PG
 start_all_services_sh --> MQ
 DigitalOcean --> PG : provisions
@@ -51,4 +57,6 @@ stop_rabbitmq_sh --> MQ
 eventstracker ..> PG : reads/writes
 runs_app ..> PG : reads/writes
 runs_ai_analyzer ..> PG : reads/writes
+verbose_barnacle ..> PG : reads/writes
+dbcleaner ..> PG : reads/writes
 @enduml

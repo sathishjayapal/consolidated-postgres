@@ -23,7 +23,7 @@ it starts, stops, verifies, and tears down the PostgreSQL databases and RabbitMQ
 ## Architecture
 
 <!-- AUTO-GENERATED:ARCHITECTURE:START -->
-![Architecture diagram](https://www.plantuml.com/plantuml/svg/XLKxRzim4DxrAmwUx87Etg58a09POiIkXmn58T3IHMPDaGn9sNMA_lUUg8SfMqetwtiSFzxnu7ldkVLLAHCll4J8j79QYfnxp9dHpXSM7J06scPxTDvoBxI2aXkOyyfhLg12MwiNYJi8PRZb9LKfZLQe_DQVgQZ5p7DLI4malddm6gmezXvoKJDKBqaCpmwyG9WzwunBU8bFcy6V1E17MKalM8v7Lfcbs_y4xY1WAM5fPLAt7yfoVLAtmXgzaHxHYhVphRZ1Mtbe5UDICeVsA39qdI4mAJ5fn_GMRIOSsjmO_aPzU9IwoaVxy4qKmdFvaY5NCCzg7Gi1g3RSGGVekacBS5Zig2iyV5GMuU7nYMQO5R6v-OoiGPgIDFXUjnSNFxbhPmF5xjTjyCON-yvtE-5N6rXnHK19hwIzc0rC-SxAmDYkLnsUjlXW71qv74LlYSPmgwGHnC8uPHCkXxNLl-YDEfYRzjVI__QBDZ4UANqzdko0DXGT8E5IbNAC6zFSX3vI-hWGWj51ylpHsXk1I3kmpaIxo7VSKQWrMjR6W7MpczlDywmshf-IzmghgBy1NcsIv6f7Q9c_NiKSK_HHfyaevfY88et156bqNKPoJUlwTF-JH1cdfPHqcgIyWurh3F05Q197uMWlNT9loJZRRC4eD_AsXrsA7kY563xS3Xyq3vRBzZIBF7Tt9oiyqdbjupwbBqsRaDsZokl_Z7y0)
+![Architecture diagram](https://www.plantuml.com/plantuml/svg/XLKxRzim4DxrAmwPue7Etg58a09P4iIkXmn58PobYyo68XMISfeK_UyzKGzJbfHkvlSW-Ttnv6ldqVgwL8cNNX5aHZkZP8wUSb4PvmjB3eG0OxC3EM_HIwEXn0ekiVP65AJ9DkfLubwahj1YoRkKbT6a_Sw_ywQMCe-wK9GeUlRW3LXP73paic5uloIfC7l1Wk3YtcIeu34-xGB-900_obfvAN8wYhfQkyDFG0S1InbBwofrXx4iDszwAcpGYVH8LZw_JyKjtib3gGGg9HpPeyp8zOR0fCoaFJDOJBNWCDN4y3UgmwqoTJvRXs-oa1xLOqQeuJ9hT29SWFU6A-W1qnHf5GwB7SqEDn-r9RYvlUCUPaLiRfUHDKXJbWRVq-xamZTtxcoXsFsq2zuus7VSxwL_sC83QWPAVYLTC1kOybMKWR5zhNeyxV1HEtfot8h14hLXgkGMnCBubktbSjXOyulVg8FBglkrzh_zghin7VdsJNko5x9Xqn4IGjNQ2QogDWalKbwS22du8FN-qTbRWKnxi17o6zmRHsAFLcEcA0WxCEt1HfZl-GVgRgjXrUJYUSOzEWws8IkwAB1fvtktlRze79kxvBMcEkfHW1-sIN8sP_n1-7eMTKunn5qcewXpeadCET4fwHpBgUPWJZKxjJFHbdL3mFz9efZBqadOPUafyhA6Wo-J77_q7MaDy0NuRHobuw-DIuRPdsVRsPxbPYPsNFHex4x4U1nxVDGBMA-xqonXxgxUhFJ4vtLz-9G-zM11Tbx_1TbG-mN-cdJU_A7-0m00)
 
 <details>
 <summary>PlantUML source (also at <code>docs/architecture.puml</code>)</summary>
@@ -58,6 +58,8 @@ package "Managed Projects (projects.txt)" {
   [eventstracker] as eventstracker
   [runs-app] as runs_app
   [runs-ai-analyzer] as runs_ai_analyzer
+  [verbose-barnacle] as verbose_barnacle
+  [dbcleaner] as dbcleaner
 }
 
 database "Per-project PostgreSQL" as PG
@@ -66,11 +68,15 @@ queue "RabbitMQ" as MQ
 multi_dev_up_sh --> eventstracker
 multi_dev_up_sh --> runs_app
 multi_dev_up_sh --> runs_ai_analyzer
+multi_dev_up_sh --> verbose_barnacle
+multi_dev_up_sh --> dbcleaner
 multi_dev_up_sh --> PG
 multi_dev_up_sh --> MQ
 start_all_services_sh --> eventstracker
 start_all_services_sh --> runs_app
 start_all_services_sh --> runs_ai_analyzer
+start_all_services_sh --> verbose_barnacle
+start_all_services_sh --> dbcleaner
 start_all_services_sh --> PG
 start_all_services_sh --> MQ
 DigitalOcean --> PG : provisions
@@ -82,9 +88,10 @@ stop_rabbitmq_sh --> MQ
 eventstracker ..> PG : reads/writes
 runs_app ..> PG : reads/writes
 runs_ai_analyzer ..> PG : reads/writes
+verbose_barnacle ..> PG : reads/writes
+dbcleaner ..> PG : reads/writes
 @enduml
 ```
-
 </details>
 <!-- AUTO-GENERATED:ARCHITECTURE:END -->
 
@@ -104,6 +111,19 @@ Reset to a clean slate: `./scripts/local/multi-dev-up.sh --reset`
 | eventstracker    | 9081     | 6433    | `event-service`       | `event-service-db`    |
 | runs-app         | 8080     | 5443    | `runsapp_db`          | `runs-app-postgres`   |
 | runs-ai-analyzer | 8081     | 5444    | `runs_ai_analyzer_db` | `runs-ai-analyzer-db` |
+
+## VM databases (VirtualBox + Portainer)
+
+Run persisted project databases on the VirtualBox VM instead of (or alongside) local Docker:
+
+```bash
+cp vm.env.example vm.env                          # one-time: VM IP + Portainer API key
+./scripts/vm/vm-db-up.sh runs-app runs-ai-analyzer  # DBs for the projects you pass
+```
+
+Regenerates the managed block in `../virtualbox-stack/docker-compose.yml`, syncs each selected project's own compose
+file, rewrites its `.env` JDBC URL to the VM (or back to localhost with `--target local`), and redeploys the Portainer
+stack via API. Data lives in named volumes on the VM. See [docs/VM_WORKFLOW.md](docs/VM_WORKFLOW.md).
 
 ## Cloud database options
 
@@ -141,7 +161,7 @@ See [RABBITMQ-README.md](RABBITMQ-README.md) for details.
 ## Repository status
 
 <!-- AUTO-GENERATED:STATUS:START -->
-_Generated from `projects.txt` and the scripts present in the repo as of `fbfc18a`._
+_Generated from `projects.txt` and the scripts present in the repo as of `725ec01`._
 
 | Script                                | Present | Description                                                                 |
 |---------------------------------------|---------|-----------------------------------------------------------------------------|
@@ -165,7 +185,8 @@ _Generated from `projects.txt` and the scripts present in the repo as of `fbfc18
 | `eventstracker`    | 6433    | `event-service`       |
 | `runs-app`         | 5443    | `runsapp_db`          |
 | `runs-ai-analyzer` | 5444    | `runs_ai_analyzer_db` |
-
+| `verbose-barnacle` | 5439    | `my-github-cleaner`   |
+| `dbcleaner`        | 5433    | `dbcleaner`           |
 <!-- AUTO-GENERATED:STATUS:END -->
 
 ## Keeping this README in sync

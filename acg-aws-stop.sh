@@ -179,6 +179,8 @@ else
   dump_db "runsapp_db"          "runsapp"
   dump_db "event-service"       "eventstracker"
   dump_db "runs_ai_analyzer_db" "runsai"
+  dump_db "my-github-cleaner"   "githubcleaner"
+  dump_db "dbcleaner"           "dbcleaner"
   set -e
 
   if [ "$BACKUP_FAILURES" -gt 0 ]; then
@@ -188,9 +190,11 @@ else
 # ACG AWS Database Backup — $TIMESTAMP
 
 ## Databases
-- runsapp.sql       → runsapp_db          (runs-app)
-- eventstracker.sql → event-service       (eventstracker)
-- runsai.sql        → runs_ai_analyzer_db (runs-ai-analyzer, pgvector)
+- runsapp.sql        → runsapp_db          (runs-app)
+- eventstracker.sql  → event-service       (eventstracker)
+- runsai.sql         → runs_ai_analyzer_db (runs-ai-analyzer, pgvector)
+- githubcleaner.sql  → my-github-cleaner   (verbose-barnacle)
+- dbcleaner.sql      → dbcleaner           (dbcleaner)
 
 ## Restore steps
 1. \`./acg-aws-start.sh\`   — provisions EC2 + opens SSM tunnel
@@ -199,6 +203,8 @@ else
 PGPASSWORD=\$DB_PASSWORD psql -h localhost -p 5432 -U \$DB_USERNAME -d runsapp_db          < runsapp.sql
 PGPASSWORD=\$DB_PASSWORD psql -h localhost -p 5432 -U \$DB_USERNAME -d "event-service"     < eventstracker.sql
 PGPASSWORD=\$DB_PASSWORD psql -h localhost -p 5432 -U \$DB_USERNAME -d runs_ai_analyzer_db < runsai.sql
+PGPASSWORD=\$DB_PASSWORD psql -h localhost -p 5432 -U \$DB_USERNAME -d "my-github-cleaner" < githubcleaner.sql
+PGPASSWORD=\$DB_PASSWORD psql -h localhost -p 5432 -U \$DB_USERNAME -d dbcleaner           < dbcleaner.sql
 \`\`\`
 Note: run each Spring Boot app once first so Flyway migrations create the schema.
 EOF

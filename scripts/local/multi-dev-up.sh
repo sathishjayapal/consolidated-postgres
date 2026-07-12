@@ -150,12 +150,11 @@ if [ ! -f "$CONFIG_SERVER_ENV" ]; then
   preflight_ok=false
 fi
 
-# Per-project dev-up.sh scripts
+# Per-project dev-up.sh scripts (projects without one are VM/ACG-only — skipped here)
 for _p in "${PROJECTS[@]}"; do
   _dir="$(resolve_project_dir "$_p")"
   if [ ! -f "$_dir/dev-up.sh" ]; then
-    print_error "Missing $_dir/dev-up.sh"
-    preflight_ok=false
+    print_info "$_p has no dev-up.sh — skipped by local orchestration (managed via scripts/vm or ACG)"
   else
     print_status "$_p/dev-up.sh found"
   fi
@@ -280,8 +279,8 @@ for project in "${PROJECTS[@]}"; do
   script="$project_dir/dev-up.sh"
 
   if [ ! -f "$script" ]; then
-    print_error "Missing $script (checked $project_dir)"
-    exit 1
+    print_info "Skipping $project — no dev-up.sh (managed via scripts/vm or ACG)"
+    continue
   fi
 
   project_upper=$(echo "$project" | tr '[:lower:]' '[:upper:]')

@@ -25,6 +25,8 @@ PROJECT_INFO = {
     "eventstracker": {"port": "6433", "db": "event-service"},
     "runs-app": {"port": "5443", "db": "runsapp_db"},
     "runs-ai-analyzer": {"port": "5444", "db": "runs_ai_analyzer_db"},
+    "verbose-barnacle": {"port": "5439", "db": "my-github-cleaner"},
+    "dbcleaner": {"port": "5433", "db": "dbcleaner"},
 }
 
 LOCAL_SCRIPTS = [

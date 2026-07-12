@@ -71,6 +71,8 @@ get_project_db_user() {
     eventstracker)     key="EVENTS_TRACKER_DB_USER"; default_user="" ;;
     runs-app)          key="JDBC_DATABASE_USERNAME"; default_user="" ;;
     runs-ai-analyzer)  key="RUNS_AI_ANALYZER_DB_USER"; default_user="" ;;
+    verbose-barnacle)  key="GITHUB_CLEANER_DB_USER"; default_user="postgres" ;;  # project compose default
+    dbcleaner)         key="JDBC_DATABASE_USERNAME"; default_user="postgres" ;;
     *)                 return 1 ;;
   esac
   # Try project .env first
@@ -141,6 +143,8 @@ get_project_db_name() {
       fi
       echo "runs_ai_analyzer_db"
       ;;
+    verbose-barnacle) echo "my-github-cleaner" ;;   # verbose-barnacle docker-compose default
+    dbcleaner)        echo "dbcleaner" ;;
     *)                return 1 ;;
   esac
 }
@@ -150,6 +154,8 @@ get_project_port() {
     eventstracker)    echo "6433" ;;   # jubilant-memory docker-compose host port
     runs-app)         echo "5443" ;;
     runs-ai-analyzer) echo "5444" ;;
+    verbose-barnacle) echo "5439" ;;
+    dbcleaner)        echo "5433" ;;
     *)                return 1 ;;
   esac
 }
@@ -159,6 +165,8 @@ get_project_container() {
     eventstracker)    echo "event-service-db" ;;   # jubilant-memory container_name
     runs-app)         echo "runs-app-postgres" ;;
     runs-ai-analyzer) echo "runs-ai-analyzer-db" ;;
+    verbose-barnacle) echo "verbose-barnacle-postgres-1" ;;  # compose default naming
+    dbcleaner)        echo "dbcleaner-postgres-1" ;;
     *)                return 1 ;;
   esac
 }
@@ -168,6 +176,8 @@ get_project_password_env_var() {
     eventstracker)    echo "EVENTS_TRACKER_DB_PASSWORD" ;;
     runs-app)         echo "RUNS_APP_DB_PASSWORD" ;;
     runs-ai-analyzer) echo "RUNS_AI_ANALYZER_DB_PASSWORD" ;;
+    verbose-barnacle) echo "GITHUB_CLEANER_DB_PASSWORD" ;;
+    dbcleaner)        echo "DBCLEANER_DB_PASSWORD" ;;
     *)                return 1 ;;
   esac
 }
@@ -177,7 +187,18 @@ get_project_env_password_key() {
     eventstracker)    echo "EVENTS_TRACKER_DB_PASSWORD" ;;
     runs-app)         echo "JDBC_DATABASE_PASSWORD" ;;
     runs-ai-analyzer) echo "RUNS_AI_ANALYZER_DB_PASSWORD" ;;
+    verbose-barnacle) echo "GITHUB_CLEANER_DB_PASSWORD" ;;
+    dbcleaner)        echo "JDBC_DATABASE_PASSWORD" ;;
     *)                return 1 ;;
+  esac
+}
+
+# Fallback password when no .env / env var override exists — matches the
+# hardcoded value in the project's own docker-compose.yml.
+get_project_default_password() {
+  case "$1" in
+    verbose-barnacle|dbcleaner) echo "P4ssword!" ;;
+    *)                          return 1 ;;
   esac
 }
 
@@ -195,6 +216,93 @@ get_project_env_file() {
   local project_dir
   project_dir=$(resolve_project_dir "$project")
   echo "$project_dir/.env"
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# VM (VirtualBox / Portainer) stack metadata — used by scripts/vm/vm-db-up.sh
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Postgres image on the VM — mirrors each project's own docker-compose.
+get_project_db_image() {
+  case "$1" in
+    eventstracker)    echo "postgres:17.5" ;;
+    runs-app)         echo "postgres:18.1" ;;
+    runs-ai-analyzer) echo "pgvector/pgvector:pg17" ;;
+    verbose-barnacle) echo "postgres:17.5" ;;
+    dbcleaner)        echo "postgres:18.3" ;;
+    *)                return 1 ;;
+  esac
+}
+
+# Data directory to mount the named volume at (postgres:18+ moved it up a level).
+get_project_pg_mount() {
+  case "$1" in
+    runs-app|dbcleaner) echo "/var/lib/postgresql" ;;        # postgres 18+
+    eventstracker|runs-ai-analyzer|verbose-barnacle) echo "/var/lib/postgresql/data" ;;
+    *)                return 1 ;;
+  esac
+}
+
+# Compose service name inside the VM stack.
+# NOTE: eventstracker must stay "postgres" — the eventstracker app container in
+# the sathish-stack reaches its DB at hostname "postgres".
+get_project_db_service() {
+  case "$1" in
+    eventstracker)    echo "postgres" ;;
+    runs-app)         echo "runs-app-db" ;;
+    runs-ai-analyzer) echo "runs-ai-analyzer-db" ;;
+    verbose-barnacle) echo "github-cleaner-db" ;;
+    dbcleaner)        echo "dbcleaner-db" ;;
+    *)                return 1 ;;
+  esac
+}
+
+# Named Docker volume on the VM (persistence).
+get_project_vm_volume() {
+  case "$1" in
+    eventstracker)    echo "pg_data_eventstracker" ;;
+    runs-app)         echo "pg_data_runs_app" ;;
+    runs-ai-analyzer) echo "pg_data_runs_ai_analyzer" ;;
+    verbose-barnacle) echo "pg_data_github_cleaner" ;;
+    dbcleaner)        echo "pg_data_dbcleaner" ;;
+    *)                return 1 ;;
+  esac
+}
+
+# Portainer stack env-var names for DB name / user (password key already exists
+# via get_project_password_env_var).
+get_project_db_name_key() {
+  case "$1" in
+    eventstracker)    echo "EVENTS_TRACKER_DB_NAME" ;;
+    runs-app)         echo "RUNS_APP_DB_NAME" ;;
+    runs-ai-analyzer) echo "RUNS_AI_ANALYZER_DB_NAME" ;;
+    verbose-barnacle) echo "GITHUB_CLEANER_DB_NAME" ;;
+    dbcleaner)        echo "DBCLEANER_DB_NAME" ;;
+    *)                return 1 ;;
+  esac
+}
+
+get_project_db_user_key() {
+  case "$1" in
+    eventstracker)    echo "EVENTS_TRACKER_DB_USER" ;;
+    runs-app)         echo "RUNS_APP_DB_USER" ;;
+    runs-ai-analyzer) echo "RUNS_AI_ANALYZER_DB_USER" ;;
+    verbose-barnacle) echo "GITHUB_CLEANER_DB_USER" ;;
+    dbcleaner)        echo "DBCLEANER_DB_USER" ;;
+    *)                return 1 ;;
+  esac
+}
+
+# Key in each project's local .env that holds the JDBC URL.
+get_project_db_url_key() {
+  case "$1" in
+    eventstracker)    echo "EVENTS_TRACKER_DB_URL" ;;
+    runs-app)         echo "JDBC_DATABASE_URL" ;;
+    runs-ai-analyzer) echo "RUNS_AI_ANALYZER_DB_URL" ;;
+    verbose-barnacle) echo "GITHUB_CLEANER_DB_URL" ;;
+    dbcleaner)        echo "JDBC_DATABASE_URL" ;;
+    *)                return 1 ;;
+  esac
 }
 
 get_project_password() {
@@ -220,6 +328,9 @@ get_project_password() {
       return 0
     fi
   fi
+
+  # Projects without a .env fall back to their compose-file default
+  get_project_default_password "$project" && return 0
 
   return 1
 }

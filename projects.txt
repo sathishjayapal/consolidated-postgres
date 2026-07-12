@@ -1,7 +1,11 @@
 # Managed Projects
 # One project name per line. Lines starting with # are ignored.
 # Add new projects here - they will be automatically included in all orchestration scripts.
+# Projects without a dev-up.sh (verbose-barnacle, dbcleaner) are skipped by the
+# local multi-dev scripts but fully supported by scripts/vm/vm-db-up.sh and ACG.
 
 eventstracker
 runs-app
 runs-ai-analyzer
+verbose-barnacle
+dbcleaner

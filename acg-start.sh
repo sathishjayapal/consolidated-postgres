@@ -154,14 +154,18 @@ PG_PASS=$(terraform output -raw pg_admin_password)
 JDBC_ET=$(terraform output -raw jdbc_eventstracker)
 JDBC_RA=$(terraform output -raw jdbc_runsapp)
 JDBC_AI=$(terraform output -raw jdbc_runsai)
+JDBC_GC=$(terraform output -raw jdbc_githubcleaner 2>/dev/null || echo "jdbc:postgresql://${PG_HOST}:5432/my-github-cleaner?sslmode=require")
+JDBC_DC=$(terraform output -raw jdbc_dbcleaner 2>/dev/null || echo "jdbc:postgresql://${PG_HOST}:5432/dbcleaner?sslmode=require")
 DB_ET=$(terraform output -raw db_name_eventstracker)
 DB_RA=$(terraform output -raw db_name_runsapp)
 DB_AI=$(terraform output -raw db_name_runsai)
+DB_GC=$(terraform output -raw db_name_githubcleaner 2>/dev/null || echo "my-github-cleaner")
+DB_DC=$(terraform output -raw db_name_dbcleaner 2>/dev/null || echo "dbcleaner")
 
 print_status "Host:  $PG_HOST"
 print_status "Port:  $PG_PORT"
 print_status "User:  $PG_USER"
-print_status "DBs:   $DB_ET | $DB_RA | $DB_AI"
+print_status "DBs:   $DB_ET | $DB_RA | $DB_AI | $DB_GC | $DB_DC"
 
 # ── Write .env.cloud ──────────────────────────────────────────────────────────
 print_section "Writing .env.cloud"
@@ -192,6 +196,16 @@ ENV_CLOUD="$SCRIPT_DIR/.env.cloud"
   printf "RUNS_AI_ANALYZER_DB_URL=%s\n" "$JDBC_AI"
   printf "RUNS_AI_ANALYZER_DB_USER=%s\n" "$PG_USER"
   printf "RUNS_AI_ANALYZER_DB_PASSWORD=%s\n\n" "$PG_PASS"
+
+  printf "# verbose-barnacle (github cleaner)\n"
+  printf "GITHUB_CLEANER_DB_URL=%s\n" "$JDBC_GC"
+  printf "GITHUB_CLEANER_DB_USER=%s\n" "$PG_USER"
+  printf "GITHUB_CLEANER_DB_PASSWORD=%s\n\n" "$PG_PASS"
+
+  printf "# dbcleaner\n"
+  printf "DBCLEANER_DB_URL=%s\n" "$JDBC_DC"
+  printf "DBCLEANER_DB_USER=%s\n" "$PG_USER"
+  printf "DBCLEANER_DB_PASSWORD=%s\n\n" "$PG_PASS"
 } > "$ENV_CLOUD"
 print_status "Written: $ENV_CLOUD"
 
@@ -256,12 +270,22 @@ update_project_env "runs-ai-analyzer" \
   "RUNS_AI_ANALYZER_DB_USER=$PG_USER" \
   "RUNS_AI_ANALYZER_DB_PASSWORD=$PG_PASS"
 
+update_project_env "verbose-barnacle" \
+  "GITHUB_CLEANER_DB_URL=$JDBC_GC" \
+  "GITHUB_CLEANER_DB_USER=$PG_USER" \
+  "GITHUB_CLEANER_DB_PASSWORD=$PG_PASS"
+
+update_project_env "dbcleaner" \
+  "JDBC_DATABASE_URL=$JDBC_DC" \
+  "JDBC_DATABASE_USERNAME=$PG_USER" \
+  "JDBC_DATABASE_PASSWORD=$PG_PASS"
+
 # ── Write status marker ───────────────────────────────────────────────────────
 cat > "$SCRIPT_DIR/.ACG_STATUS" << EOF
 ACG Azure PostgreSQL ACTIVE
 Started: $(date)
 Host: $PG_HOST
-Databases: $DB_ET | $DB_RA | $DB_AI
+Databases: $DB_ET | $DB_RA | $DB_AI | $DB_GC | $DB_DC
 
 TO TEAR DOWN (export + destroy):
   ./acg-stop.sh
@@ -275,7 +299,7 @@ print_section "ACG PostgreSQL Ready"
 echo "  Host:      $PG_HOST"
 echo "  Port:      $PG_PORT"
 echo "  User:      $PG_USER"
-echo "  Databases: $DB_ET | $DB_RA | $DB_AI"
+echo "  Databases: $DB_ET | $DB_RA | $DB_AI | $DB_GC | $DB_DC"
 echo ""
 echo "All project .env files updated. Start apps in this order:"
 echo ""

@@ -60,3 +60,7 @@ tests/vendor/
 .tmp.driveupload/*
 .ACG_AWS_STATUS
 /.tunnel.pid
+
+# VM / Portainer settings (scripts/vm)
+vm.env
+/vm.env.example
