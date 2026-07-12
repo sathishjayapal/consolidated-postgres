@@ -25,6 +25,10 @@ set -euo pipefail
 #   --dry-run           Regenerate compose files only; skip Portainer push
 #   --prune             Remove VM stack services no longer in the compose
 #                       (named volumes are preserved — data is safe)
+#   --pull              Force Portainer to re-pull images on redeploy
+#                       (pullImage:true). Default is false — new/missing
+#                       images are still pulled; existing ones are only
+#                       refreshed by Watchtower unless you pass --pull.
 #   --help              Show this help
 #
 # Requires: vm.env in the repo root (cp vm.env.example vm.env), jq, curl,
@@ -54,6 +58,7 @@ TARGET="vm"
 UPDATE_ENV=true
 DRY_RUN=false
 PRUNE=false
+PULL=false
 SELECTED=()
 
 while [[ $# -gt 0 ]]; do
@@ -62,6 +67,7 @@ while [[ $# -gt 0 ]]; do
     --no-env)  UPDATE_ENV=false; shift ;;
     --dry-run) DRY_RUN=true; shift ;;
     --prune)   PRUNE=true; shift ;;
+    --pull)    PULL=true; shift ;;
     --help)    sed -n '3,36p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
     --*)       die "Unknown option: $1" ;;
     *)         SELECTED+=("$1"); shift ;;
@@ -270,8 +276,9 @@ if [ -n "$stack_id" ]; then
     --argjson content "$content" \
     --argjson env "$merged_env" \
     --argjson prune "$PRUNE" \
-    '{stackFileContent: $content, env: $env, prune: $prune, pullImage: false}')
-  print_info "Updating stack #$stack_id (prune=$PRUNE) ..."
+    --argjson pull "$PULL" \
+    '{stackFileContent: $content, env: $env, prune: $prune, pullImage: $pull}')
+  print_info "Updating stack #$stack_id (prune=$PRUNE, pull=$PULL) ..."
   portainer_call PUT "$PORTAINER_URL/api/stacks/$stack_id?endpointId=$PORTAINER_ENDPOINT_ID" "$body"
   [[ "$REPLY_CODE" == 2* ]] \
     || die "Stack update failed (HTTP $REPLY_CODE): $REPLY_BODY"
