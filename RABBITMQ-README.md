@@ -47,21 +47,9 @@ Comprehensive management utility with multiple commands.
 - ✅ Status verification after startup
 - ✅ Error handling and logging
 
-### 2. **start-rabbitmq.sh**
-Standalone script to start RabbitMQ with conflict resolution.
+> The old standalone `start-rabbitmq.sh` / `stop-rabbitmq.sh` scripts were removed in July 2026 — `rabbitmq-manager.sh start` and `rabbitmq-manager.sh stop` cover them.
 
-```bash
-./start-rabbitmq.sh
-```
-
-### 3. **stop-rabbitmq.sh**
-Standalone script to stop RabbitMQ cleanly.
-
-```bash
-./stop-rabbitmq.sh
-```
-
-## 🔧 What These Scripts Fix
+## 🔧 What This Script Fixes
 
 ### The Problem
 When running `docker compose up`, you might encounter:

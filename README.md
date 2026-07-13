@@ -15,7 +15,7 @@ it starts, stops, verifies, and tears down the PostgreSQL databases and RabbitMQ
 | `cloud-start.sh` / `cloud-stop.sh`                                                     | DigitalOcean managed Postgres, on-demand                                                                                                 |
 | `acg-start.sh` / `acg-stop.sh`                                                         | Azure ACG sandbox — Postgres Flexible Server                                                                                             |
 | `acg-aws-start.sh` / `acg-aws-stop.sh`                                                 | AWS ACG sandbox — Docker `pgvector` on EC2 via SSM tunnel                                                                                |
-| `rabbitmq-manager.sh`, `start-rabbitmq.sh`, `stop-rabbitmq.sh`, `rabbitmq-compose.yml` | RabbitMQ lifecycle                                                                                                                       |
+| `rabbitmq-manager.sh`, `rabbitmq-compose.yml` | RabbitMQ lifecycle                                                                                                                       |
 | `tests/`                                                                               | bats test suites — run with `./tests/run-tests.sh`                                                                                       |
 | `backups/`                                                                             | `pg_dump` output from cloud teardown (gitignored)                                                                                        |
 | `docs/`                                                                                | Workflow and architecture docs                                                                                                           |
@@ -50,8 +50,6 @@ package "Cloud Orchestration" {
 
 package "RabbitMQ Management" {
   [rabbitmq-manager.sh] as rabbitmq_manager_sh
-  [start-rabbitmq.sh] as start_rabbitmq_sh
-  [stop-rabbitmq.sh] as stop_rabbitmq_sh
 }
 
 package "Managed Projects (projects.txt)" {
@@ -83,8 +81,6 @@ DigitalOcean --> PG : provisions
 Azure_ACG --> PG : provisions
 AWS_ACG --> PG : provisions
 rabbitmq_manager_sh --> MQ
-start_rabbitmq_sh --> MQ
-stop_rabbitmq_sh --> MQ
 eventstracker ..> PG : reads/writes
 runs_app ..> PG : reads/writes
 runs_ai_analyzer ..> PG : reads/writes
@@ -177,8 +173,6 @@ _Generated from `projects.txt` and the scripts present in the repo as of `725ec0
 | `acg-aws-start.sh`                    | yes     | ACG AWS Sandbox — PostgreSQL via SSM (Docker on EC2)                        |
 | `acg-aws-stop.sh`                     | yes     | ACG AWS Sandbox — PostgreSQL Teardown                                       |
 | `rabbitmq-manager.sh`                 | yes     | RabbitMQ Manager - Comprehensive utility for managing RabbitMQ containers   |
-| `start-rabbitmq.sh`                   | yes     | RabbitMQ Startup Script with Conflict Resolution                            |
-| `stop-rabbitmq.sh`                    | yes     | RabbitMQ Stop Script                                                        |
 
 | Managed project    | DB port | DB name               |
 |--------------------|---------|-----------------------|
