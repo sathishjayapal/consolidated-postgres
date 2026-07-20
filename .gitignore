@@ -64,3 +64,6 @@ tests/vendor/
 # VM / Portainer settings (scripts/vm)
 vm.env
 /vm.env.example
+
+# ACG DB server credentials — never commit
+ACG_DB_SERVER/acg-db.env

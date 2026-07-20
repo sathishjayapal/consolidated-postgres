@@ -1,0 +1,185 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Sathish Stack — ACG Cloud Server edition (Rocky/Alma/RHEL 8|9)
+#
+# Differences from the VirtualBox/Portainer compose:
+#
+#   1. NO database containers. All five project DBs run on the host's NATIVE
+#      PostgreSQL 17 (provisioned by consolidated-postgres setup-pg-server.sh).
+#      Apps reach it via host.docker.internal (extra_hosts: host-gateway).
+#      setup-pg-server.sh adds a pg_hba rule for 172.16.0.0/12 to allow this.
+#
+#   2. Published ports remapped into ACG's fixed allowlist (you cannot open
+#      other ports on ACG cloud servers):
+#         RabbitMQ mgmt UI   15672 → host 8082
+#         config-server       8888 → host 8088   (8888 not allowlisted)
+#         sathishlogger       8090 unchanged     (8000-8100 allowed)
+#         eventstracker       9081 → host 9091   (9090-9094 allowed)
+#         dbcleaner           8085 unchanged
+#      RabbitMQ AMQP 5672 is NOT published — apps use it on the internal
+#      network. If you need AMQP from your laptop, uncomment the 61613
+#      mapping below (61613 is allowlisted).
+#      Container-internal ports and service-name URLs are unchanged.
+#
+#   3. ACG reminders: the box auto-stops 4h after start (restart: unless-stopped
+#      brings everything back when you start it, provided `systemctl enable docker`
+#      was run). Public IP changes each restart — use the ACG public hostname.
+#      Outbound traffic is limited to 22/80/443, which is fine for Docker Hub
+#      pulls, watchtower polling, and the config-server git clone (https).
+#
+# Env vars: same set as the VM stack (minus the DB_NAME vars are still used
+# in JDBC URLs). Put them in a .env file next to this compose.
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+    ports:
+      - "8082:15672"    # management UI  → http://<acg-hostname>:8082
+      # - "61613:5672"  # AMQP from outside — 61613 is ACG-allowlisted; uncomment if needed
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - sathish-net
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  config-server:
+    image: travelhelper0h/sathishproject-config-server:latest
+    restart: unless-stopped
+    ports:
+      - "8088:8888"     # 8888 isn't in the ACG allowlist; internal URL stays config-server:8888
+    environment:
+      GIT_URI: ${GIT_URI}
+      encrypt_key: ${ENCRYPT_KEY}
+      SPRING_SECURITY_USER_NAME: ${CONFIG_SERVER_USERNAME}
+      SPRING_SECURITY_USER_PASSWORD: ${CONFIG_SERVER_PASSWORD}
+      username: ${CONFIG_SERVER_USERNAME}
+      pass: ${CONFIG_SERVER_PASSWORD}
+    networks:
+      - sathish-net
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -qO- --header=\"Authorization: Basic $$(echo -n $$username:$$pass | base64)\" http://localhost:8888/sathishconfigserver/info >/dev/null 2>&1 || exit 1" ]
+      interval: 20s
+      timeout: 10s
+      retries: 8
+      start_period: 40s
+
+  sathishlogger:
+    image: travelhelper0h/sathishlogger:latest
+    restart: unless-stopped
+    ports:
+      - "8090:8080"
+    environment:
+      SERVER_PORT: 8080
+      DATABASE_URL: jdbc:h2:file:/app/data/sathishlogger
+      DATABASE_USERNAME: sa
+      DATABASE_PASSWORD: ""
+      JPA_DDL_AUTO: update
+      LOG_LEVEL: INFO
+      STORAGE_TYPE: database
+      LOG_RETENTION_DAYS: 30
+    volumes:
+      - logger_data:/app/data
+    networks:
+      - sathish-net
+
+  eventstracker:
+    image: travelhelper0h/eventstracker:latest
+    restart: unless-stopped
+    ports:
+      - "9091:9081"     # 9081 isn't allowlisted on ACG; reach it at <acg-hostname>:9091
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SERVER_PORT: 9081
+      CONFIG_SERVER_URL: http://config-server:8888
+      SPRING_CLOUD_CONFIG_USERNAME: ${CONFIG_SERVER_USERNAME}
+      SPRING_CLOUD_CONFIG_PASSWORD: ${CONFIG_SERVER_PASSWORD}
+      # Native PG on the host — one instance, DB name selects the project
+      EVENTS_TRACKER_DB_URL: jdbc:postgresql://host.docker.internal:5432/${EVENTS_TRACKER_DB_NAME:-event-service}
+      EVENTS_TRACKER_DB_USER: ${EVENTS_TRACKER_DB_USER}
+      EVENTS_TRACKER_DB_PASSWORD: ${EVENTS_TRACKER_DB_PASSWORD}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS}
+      EVENT_DOMAIN_USER: ${EVENT_DOMAIN_USER}
+      EVENT_DOMAIN_USER_PASSWORD: ${EVENT_DOMAIN_USER_PASSWORD}
+    depends_on:
+      config-server:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - sathish-net
+
+  dbcleaner:
+    image: travelhelper0h/dbcleaner:latest
+    restart: unless-stopped
+    ports:
+      - "8085:8085"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SERVER_PORT: 8085
+      CONFIG_SERVER_URL: http://config-server:8888
+      SPRING_CLOUD_CONFIG_USERNAME: ${CONFIG_SERVER_USERNAME}
+      SPRING_CLOUD_CONFIG_PASSWORD: ${CONFIG_SERVER_PASSWORD}
+      # All datasources point at the single native PG instance
+      JDBC_DATABASE_URL: jdbc:postgresql://host.docker.internal:5432/${DBCLEANER_DB_NAME:-dbcleaner}
+      JDBC_DATABASE_USERNAME: ${DBCLEANER_DB_USER}
+      JDBC_DATABASE_PASSWORD: ${DBCLEANER_DB_PASSWORD}
+      RUNS_APP_DB_URL: jdbc:postgresql://host.docker.internal:5432/${RUNS_APP_DB_NAME:-runsapp_db}
+      RUNS_APP_DB_USERNAME: ${RUNS_APP_DB_USER}
+      RUNS_APP_DB_PASSWORD: ${RUNS_APP_DB_PASSWORD}
+      EVENTS_TRACKER_DB_URL: jdbc:postgresql://host.docker.internal:5432/${EVENTS_TRACKER_DB_NAME:-event-service}
+      EVENTS_TRACKER_DB_USERNAME: ${EVENTS_TRACKER_DB_USER}
+      EVENTS_TRACKER_DB_PASSWORD: ${EVENTS_TRACKER_DB_PASSWORD}
+      RUNS_AI_DB_URL: jdbc:postgresql://host.docker.internal:5432/${RUNS_AI_ANALYZER_DB_NAME:-runs_ai_analyzer_db}
+      RUNS_AI_DB_USERNAME: ${RUNS_AI_ANALYZER_DB_USER}
+      RUNS_AI_DB_PASSWORD: ${RUNS_AI_ANALYZER_DB_PASSWORD}
+    # No DB container to depend on anymore — native PG is up before Docker.
+    depends_on:
+      config-server:
+        condition: service_healthy
+    networks:
+      - sathish-net
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -qO- http://localhost:8085/actuator/health >/dev/null 2>&1 || exit 1" ]
+      interval: 20s
+      timeout: 5s
+      retries: 6
+      start_period: 60s
+
+  watchtower:
+    image: containrrr/watchtower:latest
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      WATCHTOWER_POLL_INTERVAL: 300
+      WATCHTOWER_CLEANUP: "true"
+      WATCHTOWER_INCLUDE_STOPPED: "false"
+      WATCHTOWER_ROLLING_RESTART: "true"
+      REPO_USER: travelhelper0h
+      REPO_PASS: ${DOCKERHUB_TOKEN}
+    networks:
+      - sathish-net
+
+volumes:
+  rabbitmq_data:
+  logger_data:
+
+networks:
+  sathish-net:
+    driver: bridge
