@@ -29,7 +29,17 @@
 #
 # Env vars: same set as the VM stack — RABBITMQ_DEFAULT_USER/PASS must match
 # the RABBITMQ_USER/PASSWORD used by setup-pg-server.sh (acg-db.env).
-# Put them in a .env file next to this compose.
+#   - CLI deploy:       put them in a .env file next to this compose
+#   - Portainer deploy: paste this file into Stacks → Add stack → Web editor
+#     and add each variable under "Environment variables"
+#
+# Portainer itself: 9443 is NOT ACG-allowlisted — run it published on 8443:
+#   docker volume create portainer_data
+#   docker run -d --name portainer --restart=always \
+#     -p 8443:9443 \
+#     -v /var/run/docker.sock:/var/run/docker.sock \
+#     -v portainer_data:/data portainer/portainer-ce:latest
+#   → https://<acg-hostname>:8443
 # ─────────────────────────────────────────────────────────────────────────────
 
 services:
