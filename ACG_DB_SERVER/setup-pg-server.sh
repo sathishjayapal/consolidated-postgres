@@ -109,9 +109,14 @@ for db in "${PGVECTOR_DBS[@]}"; do
 done
 
 ### ===== RabbitMQ (official repos — Erlang + server) ====================
+# NOTE: rabbitmq-server is a NOARCH rpm and lives in separate .../noarch
+# repo paths — both the $ARCH and noarch sections are required, otherwise
+# dnf reports "Unable to find a match: rabbitmq-server".
 echo "==> Installing RabbitMQ"
-if [ ! -f /etc/yum.repos.d/rabbitmq.repo ]; then
-  cat > /etc/yum.repos.d/rabbitmq.repo <<EOF
+rpm --import 'https://github.com/rabbitmq/signing-keys/releases/download/3.0/rabbitmq-release-signing-key.asc'
+rpm --import 'https://github.com/rabbitmq/signing-keys/releases/download/3.0/cloudsmith.rabbitmq-erlang.E495BB49CC4BBE5B.key'
+rpm --import 'https://github.com/rabbitmq/signing-keys/releases/download/3.0/cloudsmith.rabbitmq-server.9F4587F226208342.key'
+cat > /etc/yum.repos.d/rabbitmq.repo <<EOF
 [modern-erlang]
 name=modern-erlang-el${EL}
 baseurl=https://yum1.rabbitmq.com/erlang/el/${EL}/${ARCH}
@@ -121,6 +126,16 @@ enabled=1
 gpgkey=https://github.com/rabbitmq/signing-keys/releases/download/3.0/cloudsmith.rabbitmq-erlang.E495BB49CC4BBE5B.key
 gpgcheck=1
 
+[modern-erlang-noarch]
+name=modern-erlang-el${EL}-noarch
+baseurl=https://yum1.rabbitmq.com/erlang/el/${EL}/noarch
+        https://yum2.rabbitmq.com/erlang/el/${EL}/noarch
+repo_gpgcheck=0
+enabled=1
+gpgkey=https://github.com/rabbitmq/signing-keys/releases/download/3.0/cloudsmith.rabbitmq-erlang.E495BB49CC4BBE5B.key
+       https://github.com/rabbitmq/signing-keys/releases/download/3.0/rabbitmq-release-signing-key.asc
+gpgcheck=1
+
 [rabbitmq-server]
 name=rabbitmq-el${EL}
 baseurl=https://yum1.rabbitmq.com/rabbitmq/el/${EL}/${ARCH}
@@ -128,10 +143,21 @@ baseurl=https://yum1.rabbitmq.com/rabbitmq/el/${EL}/${ARCH}
 repo_gpgcheck=0
 enabled=1
 gpgkey=https://github.com/rabbitmq/signing-keys/releases/download/3.0/cloudsmith.rabbitmq-server.9F4587F226208342.key
+       https://github.com/rabbitmq/signing-keys/releases/download/3.0/rabbitmq-release-signing-key.asc
+gpgcheck=1
+
+[rabbitmq-server-noarch]
+name=rabbitmq-el${EL}-noarch
+baseurl=https://yum1.rabbitmq.com/rabbitmq/el/${EL}/noarch
+        https://yum2.rabbitmq.com/rabbitmq/el/${EL}/noarch
+repo_gpgcheck=0
+enabled=1
+gpgkey=https://github.com/rabbitmq/signing-keys/releases/download/3.0/cloudsmith.rabbitmq-server.9F4587F226208342.key
+       https://github.com/rabbitmq/signing-keys/releases/download/3.0/rabbitmq-release-signing-key.asc
 gpgcheck=1
 EOF
-fi
-dnf install -y -q erlang rabbitmq-server
+dnf clean metadata -q >/dev/null 2>&1 || true
+dnf install -y -q logrotate erlang rabbitmq-server
 
 echo "==> Configuring RabbitMQ (ACG port remaps)"
 mkdir -p /etc/rabbitmq
