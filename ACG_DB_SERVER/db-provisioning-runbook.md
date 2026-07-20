@@ -76,8 +76,10 @@ What it does: installs PostgreSQL 17 + pgvector (PGDG repo), creates the five
 DBs/roles, configures remote access with scram auth (plus a pg_hba rule for
 Docker's 172.16.0.0/12 so containers can reach it), then installs RabbitMQ
 from the official repos (arch **and noarch** sections — the server rpm is
-noarch), configures listeners 5672 + 61613 and the management UI on 8082,
-creates your admin user, and removes `guest`.
+noarch), pins the node name to `rabbit@localhost` (ACG images don't resolve
+the short hostname, which otherwise kills startup with an `epmd_error`),
+configures listeners 5672 + 61613 and the management UI on 8082, creates
+your admin user, and removes `guest`.
 
 **Expected ending:**
 
@@ -190,6 +192,7 @@ Do this a day early, and mind the 4-hour window mid-transfer.
 |---|---|
 | Script: "Edit the passwords" / "Set RABBITMQ_USER..." | `acg-db.env` missing or still has CHANGE_ME |
 | `Unable to find a match: rabbitmq-server` | Old script version — rabbitmq-server is noarch and needs the noarch repo sections. Rerun the current script (it rewrites `rabbitmq.repo`); if it persists: `sudo dnf clean all` and rerun |
+| rabbitmq-server fails: `{epmd_error,"<shortname>",timeout}` | ACG's /etc/hosts maps only the FQDN, so the short hostname doesn't resolve. Rerun the current script (writes `NODENAME=rabbit@localhost` to `/etc/rabbitmq/rabbitmq-env.conf`), or add that line manually and `sudo systemctl restart rabbitmq-server` |
 | `connection timed out` from laptop | Server auto-stopped (4h) — start it from the ACG page |
 | Hostname resolves to wrong IP after restart | Stale DNS — `dig <public-hostname>`, compare with panel; restart server if mismatched |
 | `FATAL: no pg_hba.conf entry` | Your IP isn't in `ALLOWED_CIDR` — edit `/var/lib/pgsql/17/data/pg_hba.conf`, `sudo systemctl reload postgresql-17` |

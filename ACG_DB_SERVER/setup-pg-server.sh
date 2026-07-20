@@ -161,6 +161,13 @@ dnf install -y -q logrotate erlang rabbitmq-server
 
 echo "==> Configuring RabbitMQ (ACG port remaps)"
 mkdir -p /etc/rabbitmq
+# ACG images map only the FQDN in /etc/hosts; the short hostname doesn't
+# resolve, which kills startup with {epmd_error,"<shortname>",timeout}.
+# Pin the node name to localhost — correct for a single-node broker and
+# immune to ACG hostname quirks across restarts.
+cat > /etc/rabbitmq/rabbitmq-env.conf <<'EOF'
+NODENAME=rabbit@localhost
+EOF
 cat > /etc/rabbitmq/rabbitmq.conf <<EOF
 # AMQP for containers/local processes on this box (NOT reachable from internet on ACG)
 listeners.tcp.local    = 0.0.0.0:5672
