@@ -3,22 +3,23 @@
 #
 # Differences from the VirtualBox/Portainer compose:
 #
-#   1. NO database containers. All five project DBs run on the host's NATIVE
-#      PostgreSQL 17 (provisioned by consolidated-postgres setup-pg-server.sh).
-#      Apps reach it via host.docker.internal (extra_hosts: host-gateway).
-#      setup-pg-server.sh adds a pg_hba rule for 172.16.0.0/12 to allow this.
+#   1. NO database containers and NO rabbitmq container. All five project DBs
+#      run on the host's NATIVE PostgreSQL 17 and messaging on the host's
+#      NATIVE RabbitMQ — both provisioned by consolidated-postgres
+#      ACG_DB_SERVER/setup-pg-server.sh. Apps reach them via
+#      host.docker.internal (extra_hosts: host-gateway). setup-pg-server.sh
+#      adds a pg_hba rule for 172.16.0.0/12 to allow the PG side.
 #
 #   2. Published ports remapped into ACG's fixed allowlist (you cannot open
 #      other ports on ACG cloud servers):
-#         RabbitMQ mgmt UI   15672 → host 8082
 #         config-server       8888 → host 8088   (8888 not allowlisted)
 #         sathishlogger       8090 unchanged     (8000-8100 allowed)
 #         eventstracker       9081 → host 9091   (9090-9094 allowed)
 #         dbcleaner           8085 unchanged
-#      RabbitMQ AMQP 5672 is NOT published — apps use it on the internal
-#      network. If you need AMQP from your laptop, uncomment the 61613
-#      mapping below (61613 is allowlisted).
-#      Container-internal ports and service-name URLs are unchanged.
+#      Native RabbitMQ endpoints (no container, provisioned by the script):
+#         AMQP for these containers: host.docker.internal:5672
+#         AMQP from your laptop:     <acg-hostname>:61613 (allowlisted)
+#         management UI:             http://<acg-hostname>:8082
 #
 #   3. ACG reminders: the box auto-stops 4h after start (restart: unless-stopped
 #      brings everything back when you start it, provided `systemctl enable docker`
@@ -26,30 +27,12 @@
 #      Outbound traffic is limited to 22/80/443, which is fine for Docker Hub
 #      pulls, watchtower polling, and the config-server git clone (https).
 #
-# Env vars: same set as the VM stack (minus the DB_NAME vars are still used
-# in JDBC URLs). Put them in a .env file next to this compose.
+# Env vars: same set as the VM stack — RABBITMQ_DEFAULT_USER/PASS must match
+# the RABBITMQ_USER/PASSWORD used by setup-pg-server.sh (acg-db.env).
+# Put them in a .env file next to this compose.
 # ─────────────────────────────────────────────────────────────────────────────
 
 services:
-
-  rabbitmq:
-    image: rabbitmq:3-management-alpine
-    restart: unless-stopped
-    environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
-    ports:
-      - "8082:15672"    # management UI  → http://<acg-hostname>:8082
-      # - "61613:5672"  # AMQP from outside — 61613 is ACG-allowlisted; uncomment if needed
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
-    networks:
-      - sathish-net
-    healthcheck:
-      test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
-      interval: 15s
-      timeout: 10s
-      retries: 5
 
   config-server:
     image: travelhelper0h/sathishproject-config-server:latest
@@ -108,16 +91,16 @@ services:
       EVENTS_TRACKER_DB_URL: jdbc:postgresql://host.docker.internal:5432/${EVENTS_TRACKER_DB_NAME:-event-service}
       EVENTS_TRACKER_DB_USER: ${EVENTS_TRACKER_DB_USER}
       EVENTS_TRACKER_DB_PASSWORD: ${EVENTS_TRACKER_DB_PASSWORD}
-      RABBITMQ_HOST: rabbitmq
+      # Native RabbitMQ on the host (provisioned by setup-pg-server.sh)
+      RABBITMQ_HOST: host.docker.internal
       RABBITMQ_PORT: 5672
       RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER}
       RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS}
       EVENT_DOMAIN_USER: ${EVENT_DOMAIN_USER}
       EVENT_DOMAIN_USER_PASSWORD: ${EVENT_DOMAIN_USER_PASSWORD}
+    # rabbitmq is native now — no container to depend on; broker is up before Docker
     depends_on:
       config-server:
-        condition: service_healthy
-      rabbitmq:
         condition: service_healthy
     networks:
       - sathish-net
@@ -177,7 +160,6 @@ services:
       - sathish-net
 
 volumes:
-  rabbitmq_data:
   logger_data:
 
 networks:

@@ -1,13 +1,19 @@
 #!/usr/bin/env bash
-# setup-pg-server.sh — native PostgreSQL 17 server on an ACG cloud server
+# setup-pg-server.sh — native PostgreSQL 17 + RabbitMQ on an ACG cloud server
 # (Rocky / Alma / RHEL 8 or 9 — auto-detected) hosting ALL project databases
 # from the sathish-stack docker-compose:
 #   event-service, runsapp_db, runs_ai_analyzer_db (pgvector),
 #   my-github-cleaner, dbcleaner
+# plus a native RabbitMQ broker (management plugin enabled).
 #
-# One PG instance, port 5432 (already allowlisted on ACG cloud servers),
-# one DB + one role per project.
-# Usage: edit CONFIG below, then:  sudo bash setup-pg-server.sh
+# ACG port allowlist notes:
+#   PostgreSQL 5432  — allowlisted, reachable from your laptop as-is
+#   AMQP 5672        — NOT allowlisted: containers/local only
+#   AMQP 61613       — extra listener on an allowlisted port for laptop access
+#   Mgmt UI 8082     — 15672 is NOT allowlisted; UI moved into 8000-8100 range
+#
+# Usage: put credentials in acg-db.env next to this script, then:
+#   sudo bash setup-pg-server.sh
 set -euo pipefail
 
 ### ---- CONFIG ----------------------------------------------------------
@@ -29,6 +35,10 @@ if [ -z "${PROJECT_DBS+x}" ]; then
   )
 fi
 [ -z "${PGVECTOR_DBS+x}" ] && PGVECTOR_DBS=("runs_ai_analyzer_db")
+RABBITMQ_USER="${RABBITMQ_USER:-CHANGE_ME}"
+RABBITMQ_PASSWORD="${RABBITMQ_PASSWORD:-CHANGE_ME}"
+RABBITMQ_MGMT_PORT="${RABBITMQ_MGMT_PORT:-8082}"   # 8000-8100 is ACG-allowlisted
+RABBITMQ_EXT_AMQP_PORT="${RABBITMQ_EXT_AMQP_PORT:-61613}"  # allowlisted AMQP for laptop
 # STRONGLY recommended on ACG: set to your home IP /32 (see checkip.amazonaws.com).
 # This is your only network-level filter — there is no security group you control.
 ALLOWED_CIDR="${ALLOWED_CIDR:-0.0.0.0/0}"
@@ -43,6 +53,7 @@ EL=$(rpm -E %rhel)   # 8 or 9
 for entry in "${PROJECT_DBS[@]}"; do
   [[ "$entry" != *CHANGE_ME* ]] || { echo "Edit the passwords in PROJECT_DBS first"; exit 1; }
 done
+[[ "$RABBITMQ_USER$RABBITMQ_PASSWORD" != *CHANGE_ME* ]] || { echo "Set RABBITMQ_USER/RABBITMQ_PASSWORD in acg-db.env"; exit 1; }
 ARCH=$(uname -m)
 
 ### ===== PGDG repo + PostgreSQL 17 + pgvector ===========================
@@ -70,9 +81,10 @@ systemctl restart "$SVC"
 
 ### ===== Host firewall (if running) =====================================
 if systemctl is-active --quiet firewalld; then
-  echo "==> firewalld active: opening 5432 + 31297 (ACG web console)"
-  firewall-cmd -q --permanent --add-port=5432/tcp
-  firewall-cmd -q --permanent --add-port=31297/tcp
+  echo "==> firewalld active: opening PG, RabbitMQ + 31297 (ACG web console)"
+  for p in 5432 5672 "$RABBITMQ_EXT_AMQP_PORT" "$RABBITMQ_MGMT_PORT" 31297; do
+    firewall-cmd -q --permanent --add-port="${p}/tcp"
+  done
   firewall-cmd -q --reload
 fi
 
@@ -96,6 +108,60 @@ for db in "${PGVECTOR_DBS[@]}"; do
   sudo -u postgres psql -d "$db" -c "CREATE EXTENSION IF NOT EXISTS vector;"
 done
 
+### ===== RabbitMQ (official repos — Erlang + server) ====================
+echo "==> Installing RabbitMQ"
+if [ ! -f /etc/yum.repos.d/rabbitmq.repo ]; then
+  cat > /etc/yum.repos.d/rabbitmq.repo <<EOF
+[modern-erlang]
+name=modern-erlang-el${EL}
+baseurl=https://yum1.rabbitmq.com/erlang/el/${EL}/${ARCH}
+        https://yum2.rabbitmq.com/erlang/el/${EL}/${ARCH}
+repo_gpgcheck=0
+enabled=1
+gpgkey=https://github.com/rabbitmq/signing-keys/releases/download/3.0/cloudsmith.rabbitmq-erlang.E495BB49CC4BBE5B.key
+gpgcheck=1
+
+[rabbitmq-server]
+name=rabbitmq-el${EL}
+baseurl=https://yum1.rabbitmq.com/rabbitmq/el/${EL}/${ARCH}
+        https://yum2.rabbitmq.com/rabbitmq/el/${EL}/${ARCH}
+repo_gpgcheck=0
+enabled=1
+gpgkey=https://github.com/rabbitmq/signing-keys/releases/download/3.0/cloudsmith.rabbitmq-server.9F4587F226208342.key
+gpgcheck=1
+EOF
+fi
+dnf install -y -q erlang rabbitmq-server
+
+echo "==> Configuring RabbitMQ (ACG port remaps)"
+mkdir -p /etc/rabbitmq
+cat > /etc/rabbitmq/rabbitmq.conf <<EOF
+# AMQP for containers/local processes on this box (NOT reachable from internet on ACG)
+listeners.tcp.local    = 0.0.0.0:5672
+# AMQP on an ACG-allowlisted port for connections from your laptop
+listeners.tcp.external = 0.0.0.0:${RABBITMQ_EXT_AMQP_PORT}
+# Management UI — 15672 is not ACG-allowlisted, use ${RABBITMQ_MGMT_PORT}
+management.tcp.ip   = 0.0.0.0
+management.tcp.port = ${RABBITMQ_MGMT_PORT}
+loopback_users = none
+EOF
+rabbitmq-plugins enable --offline rabbitmq_management >/dev/null
+systemctl enable --now rabbitmq-server
+# wait for broker
+for i in {1..30}; do rabbitmqctl -q ping >/dev/null 2>&1 && break; sleep 2; done
+rabbitmqctl -q ping || { echo "RabbitMQ did not come up"; journalctl -u rabbitmq-server -n 20 --no-pager; exit 1; }
+
+echo "==> Creating RabbitMQ user"
+if rabbitmqctl -q list_users | awk '{print $1}' | grep -qx "$RABBITMQ_USER"; then
+  rabbitmqctl -q change_password "$RABBITMQ_USER" "$RABBITMQ_PASSWORD"
+else
+  rabbitmqctl -q add_user "$RABBITMQ_USER" "$RABBITMQ_PASSWORD"
+fi
+rabbitmqctl -q set_user_tags "$RABBITMQ_USER" administrator
+rabbitmqctl -q set_permissions -p / "$RABBITMQ_USER" ".*" ".*" ".*"
+# remove default guest account (only ever worked on localhost, but be tidy)
+rabbitmqctl -q list_users | awk '{print $1}' | grep -qx guest && rabbitmqctl -q delete_user guest || true
+
 ### ===== Verify =========================================================
 echo "==> Verifying"
 PSQL="/usr/pgsql-${PGMAJOR}/bin/psql"
@@ -106,25 +172,33 @@ for entry in "${PROJECT_DBS[@]}"; do
 done
 sudo -u postgres psql -d "${PGVECTOR_DBS[0]:-postgres}" -tAc \
   "SELECT 'pgvector '||extversion FROM pg_extension WHERE extname='vector'" || true
+rabbitmqctl -q ping && echo "    OK: rabbitmq broker up (user: $RABBITMQ_USER)"
+ss -ltn | grep -E ":(5432|5672|${RABBITMQ_EXT_AMQP_PORT}|${RABBITMQ_MGMT_PORT}) " || true
 
 HOSTNAME_MSG=$(hostname -f 2>/dev/null || hostname)
 cat <<EOF
 
 =========================================================
- Done. One server, port 5432, five databases.
+ Done. PostgreSQL (5 DBs) + RabbitMQ, all native.
 
  IMPORTANT (ACG): the public IP changes on EVERY server
  restart. Use the server's PUBLIC HOSTNAME from the ACG
- "Cloud Servers" details panel in your JDBC URLs:
+ "Cloud Servers" details panel:
 
+ PostgreSQL (5432 is ACG-allowlisted):
    jdbc:postgresql://<public-hostname>:5432/event-service
    jdbc:postgresql://<public-hostname>:5432/runsapp_db
    jdbc:postgresql://<public-hostname>:5432/runs_ai_analyzer_db
    jdbc:postgresql://<public-hostname>:5432/my-github-cleaner
    jdbc:postgresql://<public-hostname>:5432/dbcleaner
 
- Port 5432 is already open on ACG — no firewall step
- needed, but that means the whole internet can reach it.
+ RabbitMQ:
+   from containers on this box:  host.docker.internal:5672
+   from your laptop (AMQP):      <public-hostname>:${RABBITMQ_EXT_AMQP_PORT}
+   management UI:                http://<public-hostname>:${RABBITMQ_MGMT_PORT}
+   (5672/15672 are NOT in ACG's allowlist — hence the remaps)
+
+ These ports are open to the whole internet on ACG.
  Keep passwords strong; tighten ALLOWED_CIDR if possible.
  (This box reports hostname: $HOSTNAME_MSG — use the one
  shown in the ACG panel, not this.)
