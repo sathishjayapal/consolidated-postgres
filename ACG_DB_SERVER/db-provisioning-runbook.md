@@ -145,8 +145,17 @@ docker run -d --name portainer --restart=always \
   -v portainer_data:/data portainer/portainer-ce:latest
 ```
 
-Open `https://<public-hostname>:8443` (self-signed cert — accept), set the
-admin password **within 5 minutes** (else `docker restart portainer`).
+First-time setup needs the **setup token** Portainer prints at startup
+(2.39.4+ security feature):
+
+```bash
+docker logs portainer 2>&1 | grep -i token
+```
+
+Open `https://<public-hostname>:8443` (self-signed cert — accept), enter the
+token from the `setup_token=` log line, and set the admin password — all
+**within 5 minutes** of container start. Missed the window or token rejected?
+`docker restart portainer` and grab the fresh token from the logs.
 
 Deploy the stack: **Stacks → Add stack → Web editor**, paste
 `docker-compose.acg.yml`, then under **Environment variables** add:
@@ -209,4 +218,5 @@ Do this a day early, and mind the 4-hour window mid-transfer.
 | RabbitMQ mgmt UI unreachable | It's on **8082**, not 15672; check `sudo ss -ltn \| grep 8082` and `sudo rabbitmqctl status` |
 | `permission denied ... /var/run/docker.sock` | docker group membership not active in this shell — log out/in or `newgrp docker` (one-off: prefix the command with `sudo`) |
 | Portainer UI unreachable | Must be published as `-p 8443:9443`; 9443 is not ACG-allowlisted |
-| Portainer "timed out for security" | `docker restart portainer`, set admin password immediately |
+| Portainer "Invalid or missing setup token" | Token required on first setup (2.39.4+): `docker logs portainer 2>&1 \| grep -i token`, paste the `setup_token=` value into the setup page |
+| Portainer "timed out for security" | `docker restart portainer`, grab the fresh setup token from logs, set admin password immediately |
