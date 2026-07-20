@@ -123,7 +123,16 @@ Install Docker (Rocky/Alma/RHEL use Docker's CE repo — unlike AL2023):
 sudo dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
 sudo dnf install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
 sudo systemctl enable --now docker
-sudo usermod -aG docker cloud_user   # log out/in afterwards
+sudo usermod -aG docker cloud_user
+```
+
+**⚠️ REQUIRED before any `docker` command:** the group change above does NOT
+apply to your current shell. Log out and ssh back in (or run `newgrp docker`).
+Skipping this gives `permission denied ... /var/run/docker.sock` on every
+docker command. Verify with:
+
+```bash
+docker ps    # must work WITHOUT sudo before continuing
 ```
 
 Portainer — published on **8443** (9443 is not ACG-allowlisted):
@@ -198,5 +207,6 @@ Do this a day early, and mind the 4-hour window mid-transfer.
 | `FATAL: no pg_hba.conf entry` | Your IP isn't in `ALLOWED_CIDR` — edit `/var/lib/pgsql/17/data/pg_hba.conf`, `sudo systemctl reload postgresql-17` |
 | Containers can't reach PG/RabbitMQ | `extra_hosts` missing, or pg_hba lacks the 172.16.0.0/12 rule (rerun script) |
 | RabbitMQ mgmt UI unreachable | It's on **8082**, not 15672; check `sudo ss -ltn \| grep 8082` and `sudo rabbitmqctl status` |
+| `permission denied ... /var/run/docker.sock` | docker group membership not active in this shell — log out/in or `newgrp docker` (one-off: prefix the command with `sudo`) |
 | Portainer UI unreachable | Must be published as `-p 8443:9443`; 9443 is not ACG-allowlisted |
 | Portainer "timed out for security" | `docker restart portainer`, set admin password immediately |
