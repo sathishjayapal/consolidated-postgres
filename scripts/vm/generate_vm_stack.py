@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regenerate the managed PROJECT-DBS block in virtualbox-stack/docker-compose.yml.
+"""Regenerate the managed PROJECT-DBS block in docker-compose-vm.yml.
 
 Reads project metadata as JSON from stdin:
   [
@@ -81,7 +81,7 @@ def replace_block(text: str, start: str, end: str, body: str, path: str) -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--compose", required=True, help="path to virtualbox-stack docker-compose.yml")
+    parser.add_argument("--compose", required=True, help="path to docker-compose-vm.yml")
     parser.add_argument("--check", action="store_true", help="exit 1 if file would change; do not write")
     args = parser.parse_args()
 

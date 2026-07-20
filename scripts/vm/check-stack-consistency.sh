@@ -7,7 +7,7 @@ set -euo pipefail
 #
 #   1. Config/deploy name drift: a config-server YAML (jubilant-memory)
 #      references ${SOME_VAR}, but the place that's supposed to set it
-#      (the VM's virtualbox-stack/docker-compose.yml service block, or
+#      (the VM's docker-compose-vm.yml service block, or
 #      the project's own local .env when not yet deployed on the VM)
 #      never defines a literal key with that exact name. This is the
 #      bug that broke eventstracker (EVENT_DOMAIN_USER casing,
@@ -33,7 +33,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 WORKSPACE_ROOT="$(cd "$REPO_ROOT/.." && pwd)"
-STACK_FILE="$WORKSPACE_ROOT/virtualbox-stack/docker-compose.yml"
+STACK_FILE="$REPO_ROOT/docker-compose-vm.yml"
 
 PROJECT_ROOT="$WORKSPACE_ROOT"
 source "$REPO_ROOT/scripts/lib/project-config.sh"
@@ -63,7 +63,7 @@ config_ymls_for() {
   esac
 }
 
-# project -> service name in virtualbox-stack/docker-compose.yml.
+# project -> service name in docker-compose-vm.yml.
 # Empty = not deployed as a VM app container yet — the check then falls back
 # to the project's own local .env instead.
 compose_service_for() {
@@ -117,7 +117,7 @@ if $RUN_CONFIG; then
 
     if [ -n "$service" ]; then
       defined=$(extract_compose_env_keys "$service")
-      source_desc="virtualbox-stack/docker-compose.yml service '$service'"
+      source_desc="docker-compose-vm.yml service '$service'"
     else
       env_file="$WORKSPACE_ROOT/$project/.env"
       if [ ! -f "$env_file" ]; then

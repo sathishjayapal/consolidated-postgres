@@ -1,5 +1,6 @@
 # Environment variables
 .env
+.env.vm
 .env.local
 .env.cloud
 
@@ -67,3 +68,7 @@ vm.env
 
 # ACG DB server credentials — never commit
 ACG_DB_SERVER/acg-db.env
+
+# Blog draft / scratch content
+blog-post-portainer-to-acg.md
+docs/blog-post-portainer-to-acg.md

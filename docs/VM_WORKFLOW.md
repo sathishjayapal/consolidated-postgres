@@ -7,7 +7,7 @@ Your Mac                                    VirtualBox VM (bridged, own LAN IP)
 ────────                                    ───────────────────────────────────
 scripts/vm/vm-db-up.sh <projects...>        Portainer :9000
   1. regenerates the managed block in         └── sathish-stack
-     ../virtualbox-stack/docker-compose.yml         ├── postgres            :6433  (eventstracker, always on)
+     docker-compose-vm.yml         ├── postgres            :6433  (eventstracker, always on)
   2. syncs each project's own compose port          ├── runs-app-db         :5443  (when selected)
   3. points project .env at the VM                  ├── runs-ai-analyzer-db :5444  (when selected, pgvector)
   4. PUTs the stack via the Portainer API           └── … config-server, rabbitmq, apps, watchtower
@@ -65,7 +65,7 @@ Connect from the Mac: `psql -h <VM_IP> -p <port> -U <user> -d <database>`
 
 | File                                                                                | What changes                                                                                                                          |
 |-------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------|
-| `../virtualbox-stack/docker-compose.yml`                                            | Only the text between `# >>> PROJECT-DBS:START/END` and `# >>> PROJECT-DB-VOLUMES:START/END` markers — never edit inside them by hand |
+| `docker-compose-vm.yml`                                            | Only the text between `# >>> PROJECT-DBS:START/END` and `# >>> PROJECT-DB-VOLUMES:START/END` markers — never edit inside them by hand |
 | Selected project's `docker-compose.yml` (eventstracker → `jubilant-memory/config/`) | Host-port mapping kept in sync with `project-config.sh`                                                                               |
 | Selected project's `.env`                                                           | The JDBC URL key is rewritten to `jdbc:postgresql://<VM_IP or localhost>:<port>/<db>`; a `.env.bak` backup is made first              |
 
@@ -87,5 +87,5 @@ Connect from the Mac: `psql -h <VM_IP> -p <port> -U <user> -d <database>`
   `get_project_db_user_key`, `get_project_db_url_key` plus the existing ones).
 - **Stack env vars**: the script merges DB credentials into the existing Portainer stack env — `GIT_URI`, `RABBITMQ_*`,
   etc. are preserved. If the stack doesn't exist yet, create it once via the Portainer UI (see
-  `virtualbox-stack/README.md`)
+  `docs/PORTAINER-SETUP.md`)
   so those base vars get set.

@@ -6,7 +6,7 @@ set -euo pipefail
 #
 # Brings up persisted PostgreSQL databases on the VirtualBox VM for
 # the projects you pass as parameters, by regenerating the managed
-# block in virtualbox-stack/docker-compose.yml and redeploying the
+# block in docker-compose-vm.yml and redeploying the
 # Portainer stack via its REST API.
 #
 # Usage:
@@ -44,7 +44,7 @@ WORKSPACE_ROOT="$(cd "$REPO_ROOT/.." && pwd)"
 PROJECT_ROOT="$WORKSPACE_ROOT"
 source "$REPO_ROOT/scripts/lib/project-config.sh"
 
-STACK_FILE="$WORKSPACE_ROOT/virtualbox-stack/docker-compose.yml"
+STACK_FILE="$REPO_ROOT/docker-compose-vm.yml"
 VM_ENV_FILE="$REPO_ROOT/vm.env"
 
 GREEN='\033[0;32m'; RED='\033[0;31m'; YELLOW='\033[1;33m'; NC='\033[0m'
@@ -248,13 +248,13 @@ merge_env() {
      | ($a | map(select(.name as $n | $names | index($n) | not))) + $b'
 }
 
-# Base stack env (GIT_URI, CONFIG_SERVER_*, RABBITMQ_*, ...) from virtualbox-stack/.env
-STACK_ENV_FILE="$WORKSPACE_ROOT/virtualbox-stack/.env"
+# Base stack env (GIT_URI, CONFIG_SERVER_*, RABBITMQ_*, ...) from .env.vm
+STACK_ENV_FILE="$REPO_ROOT/.env.vm"
 base_env=$(env_file_to_json "$STACK_ENV_FILE")
 if [ "$(jq 'length' <<<"$base_env")" -gt 0 ]; then
-  print_info "Pushing $(jq 'length' <<<"$base_env") base env var(s) from virtualbox-stack/.env"
+  print_info "Pushing $(jq 'length' <<<"$base_env") base env var(s) from .env.vm"
 else
-  print_info "No virtualbox-stack/.env found — only DB env vars will be pushed (config-server/rabbitmq need GIT_URI etc. to become healthy!)"
+  print_info "No .env.vm found — only DB env vars will be pushed (config-server/rabbitmq need GIT_URI etc. to become healthy!)"
 fi
 
 # Env entries this script owns (values read from each project's local .env)
@@ -269,7 +269,7 @@ content=$(jq -Rs . < "$STACK_FILE")
 if [ -n "$stack_id" ]; then
   # Merge: keep existing stack env (GIT_URI, RABBITMQ_*, ...) — ours win on conflict
   existing_env=$(curl -fsS "${auth[@]}" "$PORTAINER_URL/api/stacks/$stack_id" | jq '.Env // []')
-  # precedence: virtualbox-stack/.env < existing stack env (Portainer UI edits) < DB vars
+  # precedence: .env.vm < existing stack env (Portainer UI edits) < DB vars
   merged_env=$(merge_env "$base_env" "$existing_env")
   merged_env=$(merge_env "$merged_env" "$our_env")
   body=$(jq -n \
@@ -300,7 +300,7 @@ else
   fi
   [[ "$REPLY_CODE" == 2* ]] \
     || die "Stack creation failed (HTTP $REPLY_CODE): $REPLY_BODY
-NOTE: the base stack needs GIT_URI/RABBITMQ_*/CONFIG_SERVER_* env vars — after creation, add them in Portainer → Stacks → $PORTAINER_STACK_NAME → Environment variables (see virtualbox-stack/README.md)."
+NOTE: the base stack needs GIT_URI/RABBITMQ_*/CONFIG_SERVER_* env vars — after creation, add them in Portainer → Stacks → $PORTAINER_STACK_NAME → Environment variables (see docs/PORTAINER-SETUP.md)."
   print_status "Stack '$PORTAINER_STACK_NAME' created (remember to add GIT_URI, RABBITMQ_*, CONFIG_SERVER_* env vars in Portainer)"
 fi
 

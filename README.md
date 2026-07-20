@@ -117,7 +117,7 @@ cp vm.env.example vm.env                          # one-time: VM IP + Portainer 
 ./scripts/vm/vm-db-up.sh runs-app runs-ai-analyzer  # DBs for the projects you pass
 ```
 
-Regenerates the managed block in `../virtualbox-stack/docker-compose.yml`, syncs each selected project's own compose
+Regenerates the managed block in `docker-compose-vm.yml`, syncs each selected project's own compose
 file, rewrites its `.env` JDBC URL to the VM (or back to localhost with `--target local`), and redeploys the Portainer
 stack via API. Data lives in named volumes on the VM. See [docs/VM_WORKFLOW.md](docs/VM_WORKFLOW.md).
 
