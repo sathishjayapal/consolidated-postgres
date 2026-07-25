@@ -81,7 +81,7 @@ def replace_block(text: str, start: str, end: str, body: str, path: str) -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--compose", required=True, help="path to docker-compose-vm.yml")
+    parser.add_argument("--compose", required=True, help="path to ../../compose/docker-compose-vm.yml")
     parser.add_argument("--check", action="store_true", help="exit 1 if file would change; do not write")
     args = parser.parse_args()
 

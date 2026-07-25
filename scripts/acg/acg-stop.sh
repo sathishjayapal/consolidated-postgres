@@ -4,12 +4,12 @@ set -euo pipefail
 #################################################################
 # ACG Azure Sandbox — PostgreSQL Teardown
 #
-# Usage: ./acg-stop.sh
+# Usage: ./scripts/acg/acg-stop.sh
 #
 # What it does:
 #   1. Dumps all 3 databases to timestamped backup files
 #   2. Runs terraform destroy (targeting PostgreSQL module only)
-#   3. Cleans up .env.cloud and status marker
+#   3. Cleans up env/.env.cloud and status marker
 #
 # Run this BEFORE your ACG sandbox session expires to save data.
 # Backups are written to ./backups/acg-YYYY-MM-DD-HHMM/
@@ -20,8 +20,11 @@ set -euo pipefail
 #################################################################
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-IAC_DIR="$(cd "$SCRIPT_DIR/../iAC-NikeRuns" && pwd)"
-TFVARS_FILE="$SCRIPT_DIR/acg.tfvars"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+IAC_DIR="$(cd "$REPO_ROOT/../iAC-NikeRuns" && pwd)"
+TFVARS_FILE="$REPO_ROOT/env/acg.tfvars"
+ENV_CLOUD="$REPO_ROOT/env/.env.cloud"
+ACG_STATUS_FILE="$REPO_ROOT/.ACG_STATUS"
 
 # ── Colors ────────────────────────────────────────────────────────────────────
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; NC='\033[0m'
@@ -50,7 +53,7 @@ if ! command -v pg_dump &>/dev/null; then
 fi
 
 if [ ! -f "$TFVARS_FILE" ]; then
-  print_error "acg.tfvars not found — run acg-start.sh first"
+  print_error "acg.tfvars not found — run scripts/acg/acg-start.sh first"
   exit 1
 fi
 
@@ -77,7 +80,7 @@ if [ -z "$PG_HOST" ] || [ -z "$PG_USER" ] || [ -z "$PG_PASS" ]; then
     -target=module.flexipostgresmodule \
     -input=false \
     -auto-approve || true
-  rm -f "$SCRIPT_DIR/.env.cloud" "$SCRIPT_DIR/.ACG_STATUS"
+  rm -f "$ENV_CLOUD" "$ACG_STATUS_FILE"
   exit 0
 fi
 
@@ -88,7 +91,7 @@ print_status "Databases: $DB_ET | $DB_RA | $DB_AI | $DB_GC | $DB_DC"
 print_section "Exporting Data (Step 1/3)"
 
 TIMESTAMP=$(date +%Y-%m-%d-%H%M)
-BACKUP_DIR="$SCRIPT_DIR/backups/acg-$TIMESTAMP"
+BACKUP_DIR="$REPO_ROOT/backups/acg-$TIMESTAMP"
 mkdir -p "$BACKUP_DIR"
 
 dump_db() {
@@ -128,8 +131,8 @@ cat > "$BACKUP_DIR/RESTORE.md" << EOF
 - dbcleaner.sql      → dbcleaner
 
 ## To restore
-1. \`./acg-start.sh\`  — recreate infrastructure
-2. Load host/password from .env.cloud
+1. \`./scripts/acg/acg-start.sh\`  — recreate infrastructure
+2. Load host/password from env/.env.cloud
 3. Restore each database:
 \`\`\`bash
 PGPASSWORD=\$PG_PASS psql -h \$PG_HOST -p \$PG_PORT -U \$PG_USER -d event-service < eventstracker.sql
@@ -158,8 +161,8 @@ print_status "PostgreSQL Flexible Server destroyed — charges stopped."
 # ── Cleanup ───────────────────────────────────────────────────────────────────
 print_section "Cleanup (Step 3/3)"
 
-rm -f "$SCRIPT_DIR/.env.cloud" "$SCRIPT_DIR/.ACG_STATUS"
-print_status ".env.cloud and status files removed"
+rm -f "$ENV_CLOUD" "$ACG_STATUS_FILE"
+print_status "env/.env.cloud and status files removed"
 
 # Restore project .env files to localhost defaults so local dev still works
 restore_local_env() {
@@ -168,7 +171,7 @@ restore_local_env() {
   if [ -d "$HOME/IdeaProjects/$project" ]; then
     env_file="$HOME/IdeaProjects/$project/.env"
   else
-    env_file="$(cd "$SCRIPT_DIR/.." && pwd)/$project/.env"
+    env_file="$(cd "$REPO_ROOT/.." && pwd)/$project/.env"
   fi
   shift
   [ -f "$env_file" ] || return
@@ -206,5 +209,5 @@ echo ""
 echo "To resume with ACG:"
 echo "  1. Start a new ACG lab session"
 echo "  2. Update acg.tfvars with the new subscription_id, tenant_id, rg_name"
-echo "  3. ./acg-start.sh"
+echo "  3. ./scripts/acg/acg-start.sh"
 echo "  4. Restore data if needed (see $BACKUP_DIR/RESTORE.md)"

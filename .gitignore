@@ -4,6 +4,14 @@
 .env.local
 .env.cloud
 
+# Centralized environment directory: ignore real secrets, keep examples tracked
+env/.env.vm
+env/.env.cloud
+env/.env.local
+env/vm.env
+env/acg.tfvars
+env/terraform.tfvars
+
 # Terraform
 .terraform/
 .terraform.lock.hcl
@@ -13,10 +21,11 @@ terraform.tfstate.*
 terraform.tfvars
 acg.tfvars
 .ACG_STATUS
+.ACG_AWS_STATUS
+.CLOUD_STATUS
 
 # Python
 venv/
-env/
 __pycache__/
 *.py[cod]
 *$py.class
@@ -64,10 +73,9 @@ tests/vendor/
 
 # VM / Portainer settings (scripts/vm)
 vm.env
-/vm.env.example
 
 # ACG DB server credentials — never commit
-ACG_DB_SERVER/acg-db.env
+scripts/acg/db-server/acg-db.env
 
 # Blog draft / scratch content
 blog-post-portainer-to-acg.md

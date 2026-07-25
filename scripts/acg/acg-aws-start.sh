@@ -4,7 +4,7 @@ set -euo pipefail
 #################################################################
 # ACG AWS Sandbox — PostgreSQL via SSM (Docker on EC2)
 #
-# Usage: ./acg-aws-start.sh
+# Usage: ./scripts/acg/acg-aws-start.sh
 #
 # What it does:
 #   1. Verifies prerequisites + AWS credentials
@@ -12,7 +12,7 @@ set -euo pipefail
 #   3. Waits for SSM agent to register on relay EC2
 #   4. Opens SSM port-forwarding tunnel: localhost:5432 → EC2:5432
 #   5. Waits for all three databases to be ready
-#   6. Writes .env.cloud and updates each project's .env
+#   6. Writes env/.env.cloud and updates each project's .env
 #
 # All three databases live in a single Docker pgvector/pgvector:pg16
 # container on the EC2. user_data creates them on first boot.
@@ -27,11 +27,12 @@ set -euo pipefail
 #################################################################
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SHARED_DB_DIR="$(cd "$SCRIPT_DIR/../iAC-NikeRuns/aws-modules/shared-db" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+SHARED_DB_DIR="$(cd "$REPO_ROOT/../iAC-NikeRuns/aws-modules/shared-db" && pwd)"
 TFVARS_FILE="$SHARED_DB_DIR/terraform.tfvars"
-TUNNEL_PID_FILE="$SCRIPT_DIR/.tunnel.pid"
+TUNNEL_PID_FILE="$REPO_ROOT/.tunnel.pid"
 LOCAL_PORT=5432    # single SSM tunnel: laptop → EC2 Docker PostgreSQL
-ENV_CLOUD="$SCRIPT_DIR/.env.cloud"
+ENV_CLOUD="$REPO_ROOT/env/.env.cloud"
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; NC='\033[0m'
 print_status()  { echo -e "${GREEN}✓${NC} $1"; }
@@ -292,8 +293,8 @@ for db in "event-service" "runs_ai_analyzer_db" "my-github-cleaner" "dbcleaner";
   fi
 done
 
-# ── Write .env.cloud ──────────────────────────────────────────────────────────
-print_section "Writing .env.cloud"
+# ── Write env/.env.cloud ──────────────────────────────────────────────────────────
+print_section "Writing env/.env.cloud"
 
 JDBC_RA="jdbc:postgresql://localhost:${LOCAL_PORT}/runsapp_db"
 JDBC_ET="jdbc:postgresql://localhost:${LOCAL_PORT}/event-service"
@@ -405,7 +406,9 @@ upsert_env "$(resolve_env dbcleaner)" \
 print_status "dbcleaner/.env updated"
 
 # ── Status marker ─────────────────────────────────────────────────────────────
-cat > "$SCRIPT_DIR/.ACG_AWS_STATUS" << EOF
+ACG_AWS_STATUS_FILE="$REPO_ROOT/.ACG_AWS_STATUS"
+
+cat > "$ACG_AWS_STATUS_FILE" << EOF
 ACG AWS PostgreSQL ACTIVE
 Started: $(date)
 EC2 instance: $INSTANCE_ID

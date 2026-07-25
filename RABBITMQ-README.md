@@ -1,6 +1,6 @@
 # RabbitMQ Management Utilities
 
-This directory contains utility scripts to manage RabbitMQ containers without encountering conflicts.
+The `scripts/local/` directory contains utility scripts to manage RabbitMQ containers without encountering conflicts.
 
 ## 🚀 Quick Start
 
@@ -8,27 +8,27 @@ This directory contains utility scripts to manage RabbitMQ containers without en
 
 ```bash
 # Start RabbitMQ (handles all conflicts automatically)
-./rabbitmq-manager.sh start
+./scripts/local/rabbitmq-manager.sh start
 
 # Check status
-./rabbitmq-manager.sh status
+./scripts/local/rabbitmq-manager.sh status
 
 # View logs
-./rabbitmq-manager.sh logs
+./scripts/local/rabbitmq-manager.sh logs
 
 # Restart
-./rabbitmq-manager.sh restart
+./scripts/local/rabbitmq-manager.sh restart
 
 # Stop
-./rabbitmq-manager.sh stop
+./scripts/local/rabbitmq-manager.sh stop
 
 # Clean everything (removes volumes too)
-./rabbitmq-manager.sh clean
+./scripts/local/rabbitmq-manager.sh clean
 ```
 
 ## 📋 Available Scripts
 
-### 1. **rabbitmq-manager.sh** (Recommended)
+### 1. **scripts/local/rabbitmq-manager.sh** (Recommended)
 Comprehensive management utility with multiple commands.
 
 **Commands:**
@@ -47,7 +47,7 @@ Comprehensive management utility with multiple commands.
 - ✅ Status verification after startup
 - ✅ Error handling and logging
 
-> The old standalone `start-rabbitmq.sh` / `stop-rabbitmq.sh` scripts were removed in July 2026 — `rabbitmq-manager.sh start` and `rabbitmq-manager.sh stop` cover them.
+> The old standalone `start-rabbitmq.sh` / `stop-rabbitmq.sh` scripts were removed in July 2026 — `scripts/local/rabbitmq-manager.sh start` and `scripts/local/rabbitmq-manager.sh stop` cover them.
 
 ## 🔧 What This Script Fixes
 
@@ -80,11 +80,11 @@ After starting RabbitMQ:
 ### Container won't start
 ```bash
 # Check logs
-./rabbitmq-manager.sh logs
+./scripts/local/rabbitmq-manager.sh logs
 
 # Try cleaning everything and starting fresh
-./rabbitmq-manager.sh clean
-./rabbitmq-manager.sh start
+./scripts/local/rabbitmq-manager.sh clean
+./scripts/local/rabbitmq-manager.sh start
 ```
 
 ### Port already in use
@@ -94,7 +94,7 @@ lsof -i :5672
 lsof -i :15672
 
 # Stop other RabbitMQ instances
-./rabbitmq-manager.sh stop
+./scripts/local/rabbitmq-manager.sh stop
 ```
 
 ### Orphaned containers
@@ -113,21 +113,21 @@ docker stop sathishproject-rabbitmq
 docker rm sathishproject-rabbitmq
 
 # Start with compose
-docker compose -f rabbitmq-compose.yml -p consolidated-postgres up -d --remove-orphans
+docker compose -f compose/rabbitmq-compose.yml -p consolidated-postgres up -d --remove-orphans
 
 # View logs
 docker logs sathishproject-rabbitmq
 
 # Stop with compose
-docker compose -f rabbitmq-compose.yml -p consolidated-postgres down
+docker compose -f compose/rabbitmq-compose.yml -p consolidated-postgres down
 ```
 
 ## 🎯 Best Practices
 
 1. **Always use the manager script** for consistent behavior
-2. **Check status** before starting: `./rabbitmq-manager.sh status`
-3. **View logs** if something goes wrong: `./rabbitmq-manager.sh logs`
-4. **Clean periodically** to remove unused volumes: `./rabbitmq-manager.sh clean`
+2. **Check status** before starting: `./scripts/local/rabbitmq-manager.sh status`
+3. **View logs** if something goes wrong: `./scripts/local/rabbitmq-manager.sh logs`
+4. **Clean periodically** to remove unused volumes: `./scripts/local/rabbitmq-manager.sh clean`
 
 ## 🔄 Integration with IDE
 
@@ -135,9 +135,9 @@ You can configure your IDE to use these scripts:
 
 ### IntelliJ IDEA / VS Code
 Add run configurations:
-- **Start RabbitMQ**: `./rabbitmq-manager.sh start`
-- **Stop RabbitMQ**: `./rabbitmq-manager.sh stop`
-- **View Status**: `./rabbitmq-manager.sh status`
+- **Start RabbitMQ**: `./scripts/local/rabbitmq-manager.sh start`
+- **Stop RabbitMQ**: `./scripts/local/rabbitmq-manager.sh stop`
+- **View Status**: `./scripts/local/rabbitmq-manager.sh status`
 
 ## 📚 Additional Resources
 

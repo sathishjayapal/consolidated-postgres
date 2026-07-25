@@ -17,7 +17,7 @@ WORKSPACE_ROOT="$(cd "$REPO_ROOT/.." && pwd)"
 PROJECT_ROOT="$WORKSPACE_ROOT"
 source "$REPO_ROOT/scripts/lib/project-config.sh"
 
-RABBIT_COMPOSE_FILE="$REPO_ROOT/rabbitmq-compose.yml"
+RABBIT_COMPOSE_FILE="$REPO_ROOT/compose/rabbitmq-compose.yml"
 CONFIG_SERVER_DIR="$(get_config_server_dir)"
 CONFIG_SERVER_CONTAINER="$(get_config_server_container)"
 RABBIT_CONTAINER="$(get_rabbitmq_container)"

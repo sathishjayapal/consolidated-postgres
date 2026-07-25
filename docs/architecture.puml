@@ -12,15 +12,13 @@ package "Local Orchestration" {
 }
 
 package "Cloud Orchestration" {
-  [DigitalOcean (cloud-start.sh / cloud-stop.sh)] as DigitalOcean
-  [Azure ACG (acg-start.sh / acg-stop.sh)] as Azure_ACG
-  [AWS ACG (acg-aws-start.sh / acg-aws-stop.sh)] as AWS_ACG
+  [DigitalOcean (scripts/cloud/cloud-start.sh / scripts/cloud/cloud-stop.sh)] as DigitalOcean
+  [Azure ACG (scripts/acg/acg-start.sh / scripts/acg/acg-stop.sh)] as Azure_ACG
+  [AWS ACG (scripts/acg/acg-aws-start.sh / scripts/acg/acg-aws-stop.sh)] as AWS_ACG
 }
 
 package "RabbitMQ Management" {
   [rabbitmq-manager.sh] as rabbitmq_manager_sh
-  [start-rabbitmq.sh] as start_rabbitmq_sh
-  [stop-rabbitmq.sh] as stop_rabbitmq_sh
 }
 
 package "Managed Projects (projects.txt)" {
@@ -52,8 +50,6 @@ DigitalOcean --> PG : provisions
 Azure_ACG --> PG : provisions
 AWS_ACG --> PG : provisions
 rabbitmq_manager_sh --> MQ
-start_rabbitmq_sh --> MQ
-stop_rabbitmq_sh --> MQ
 eventstracker ..> PG : reads/writes
 runs_app ..> PG : reads/writes
 runs_ai_analyzer ..> PG : reads/writes

@@ -16,7 +16,7 @@ set -euo pipefail
 #   3. Creates/updates .env files via existing project scripts
 #   4. Verifies seeded data (configurable checks)
 #
-# Projects are defined in: ../../projects.txt
+# Projects are defined in: projects.txt
 # Add new projects there - they will be automatically included.
 #################################################################
 
@@ -26,7 +26,7 @@ WORKSPACE_ROOT="$(cd "$REPO_ROOT/.." && pwd)"
 cd "$REPO_ROOT"
 
 # Configuration
-RABBIT_COMPOSE_FILE="$REPO_ROOT/rabbitmq-compose.yml"
+RABBIT_COMPOSE_FILE="$REPO_ROOT/compose/rabbitmq-compose.yml"
 RABBIT_CONTAINER_NAME="sathishproject-rabbitmq"
 
 PROJECT_ROOT="$WORKSPACE_ROOT"

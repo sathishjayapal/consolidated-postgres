@@ -37,11 +37,11 @@ SCRIPTS_LOCAL="$REPO_ROOT/scripts/local"
 }
 
 @test "rabbitmq-manager.sh is executable" {
-  [ -x "$REPO_ROOT/rabbitmq-manager.sh" ]
+  [ -x "$SCRIPTS_LOCAL/rabbitmq-manager.sh" ]
 }
 
 @test "diagnose.sh is executable" {
-  [ -x "$REPO_ROOT/diagnose.sh" ]
+  [ -x "$REPO_ROOT/scripts/cloud/diagnose.sh" ]
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -103,7 +103,7 @@ SCRIPTS_LOCAL="$REPO_ROOT/scripts/local"
 # ─────────────────────────────────────────────────────────────────────────────
 
 @test "rabbitmq-manager.sh help prints usage" {
-  run bash "$REPO_ROOT/rabbitmq-manager.sh" help
+  run bash "$SCRIPTS_LOCAL/rabbitmq-manager.sh" help
   [ "$status" -eq 0 ]
   [[ "$output" == *"start"* ]]
   [[ "$output" == *"stop"* ]]
@@ -111,27 +111,27 @@ SCRIPTS_LOCAL="$REPO_ROOT/scripts/local"
 }
 
 @test "rabbitmq-manager.sh --help flag works" {
-  run bash "$REPO_ROOT/rabbitmq-manager.sh" --help
+  run bash "$SCRIPTS_LOCAL/rabbitmq-manager.sh" --help
   [ "$status" -eq 0 ]
 }
 
 @test "rabbitmq-manager.sh -h flag works" {
-  run bash "$REPO_ROOT/rabbitmq-manager.sh" -h
+  run bash "$SCRIPTS_LOCAL/rabbitmq-manager.sh" -h
   [ "$status" -eq 0 ]
 }
 
 @test "rabbitmq-manager.sh unknown command exits 1" {
-  run bash "$REPO_ROOT/rabbitmq-manager.sh" totally-invalid-command
+  run bash "$SCRIPTS_LOCAL/rabbitmq-manager.sh" totally-invalid-command
   [ "$status" -eq 1 ]
 }
 
 @test "rabbitmq-manager.sh with no arguments exits 1" {
-  run bash "$REPO_ROOT/rabbitmq-manager.sh"
+  run bash "$SCRIPTS_LOCAL/rabbitmq-manager.sh"
   [ "$status" -eq 1 ]
 }
 
 @test "rabbitmq-manager.sh unknown command prints error message" {
-  run bash "$REPO_ROOT/rabbitmq-manager.sh" bad-cmd
+  run bash "$SCRIPTS_LOCAL/rabbitmq-manager.sh" bad-cmd
   [[ "$output" == *"Unknown command"* ]] || [[ "$output" == *"unknown"* ]]
 }
 

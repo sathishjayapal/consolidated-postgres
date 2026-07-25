@@ -4,7 +4,7 @@ set -euo pipefail
 #################################################################
 # On-Demand Cloud Database Shutdown
 #
-# Usage: ./cloud-stop.sh
+# Usage: ./scripts/cloud/cloud-stop.sh
 #
 # What it does:
 #   1. Exports all data from PostgreSQL to local backup
@@ -15,10 +15,13 @@ set -euo pipefail
 # Cost Impact: Stops ~$0.67/day charges immediately
 # Data Safety: All data exported before deletion
 #
-# Recovery: ./cloud-start.sh && psql < backup-2026-03-22-1130.sql
+# Recovery: ./scripts/cloud/cloud-start.sh && psql < backup-2026-03-22-1130.sql
 #################################################################
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+ENV_CLOUD="$REPO_ROOT/env/.env.cloud"
+CLOUD_STATUS_FILE="$REPO_ROOT/.CLOUD_STATUS"
 cd "$SCRIPT_DIR"
 
 # Colors for output
@@ -98,7 +101,7 @@ print_status "Database: $DB_HOST:$DB_PORT / $EVENTSTRACKER_DB"
 print_info "Using admin user: $DB_USERNAME"
 
 # Create backup directory if it doesn't exist
-BACKUP_DIR="./backups"
+BACKUP_DIR="$REPO_ROOT/backups"
 mkdir -p "$BACKUP_DIR"
 
 # Export data with timestamp
@@ -165,7 +168,7 @@ Backup File: $BACKUP_FILE
 Size: $(ls -lh $BACKUP_FILE 2>/dev/null | awk '{print $5}' || echo "unknown")
 
 To restore:
-  ./cloud-start.sh  # Recreate infrastructure
+  ./scripts/cloud/cloud-start.sh  # Recreate infrastructure
   psql -h \$HOST -U \$USER -d \$DATABASE < $BACKUP_FILE
 
 Files in this backup:
@@ -184,7 +187,7 @@ print_section "Step 3: Backup Summary"
 print_status "Local backup created: $BACKUP_FILE"
 print_info "This backup is stored locally for recovery"
 print_info "If needed, restore with:"
-echo "  ./cloud-start.sh"
+echo "  ./scripts/cloud/cloud-start.sh"
 echo "  psql -h \$HOST -U \$USER -d \$DATABASE < $BACKUP_FILE"
 
 # Destroy infrastructure
@@ -211,10 +214,10 @@ fi
 # Cleanup
 print_section "Step 5: Cleanup"
 
-rm -f .CLOUD_STATUS
-rm -f .env.cloud
+rm -f "$CLOUD_STATUS_FILE"
+rm -f "$ENV_CLOUD"
 
-print_status "Removed .env.cloud and status files"
+print_status "Removed env/.env.cloud and status files"
 
 # Summary
 print_section "✅ Cloud Infrastructure Shutdown Complete"

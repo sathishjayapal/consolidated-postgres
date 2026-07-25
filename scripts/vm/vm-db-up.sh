@@ -6,7 +6,7 @@ set -euo pipefail
 #
 # Brings up persisted PostgreSQL databases on the VirtualBox VM for
 # the projects you pass as parameters, by regenerating the managed
-# block in docker-compose-vm.yml and redeploying the
+# block in compose/docker-compose-vm.yml and redeploying the
 # Portainer stack via its REST API.
 #
 # Usage:
@@ -31,7 +31,7 @@ set -euo pipefail
 #                       refreshed by Watchtower unless you pass --pull.
 #   --help              Show this help
 #
-# Requires: vm.env in the repo root (cp vm.env.example vm.env), jq, curl,
+# Requires: env/vm.env in the repo root (cp env/vm.env.example env/vm.env), jq, curl,
 #           python3. Each selected project's .env must exist locally
 #           (run its dev-up.sh once) so DB users/passwords can be pushed
 #           to the Portainer stack environment.
@@ -44,8 +44,8 @@ WORKSPACE_ROOT="$(cd "$REPO_ROOT/.." && pwd)"
 PROJECT_ROOT="$WORKSPACE_ROOT"
 source "$REPO_ROOT/scripts/lib/project-config.sh"
 
-STACK_FILE="$REPO_ROOT/docker-compose-vm.yml"
-VM_ENV_FILE="$REPO_ROOT/vm.env"
+STACK_FILE="$REPO_ROOT/compose/docker-compose-vm.yml"
+VM_ENV_FILE="$REPO_ROOT/env/vm.env"
 
 GREEN='\033[0;32m'; RED='\033[0;31m'; YELLOW='\033[1;33m'; NC='\033[0m'
 print_status() { echo -e "${GREEN}✓${NC} $1"; }
@@ -93,8 +93,8 @@ if [ -f "$VM_ENV_FILE" ]; then
   # shellcheck disable=SC1090
   source "$VM_ENV_FILE"
 else
-  $DRY_RUN || die "vm.env not found. Run: cp $REPO_ROOT/vm.env.example $REPO_ROOT/vm.env and fill it in"
-  print_info "vm.env not found — OK for --dry-run, .env updates will use placeholder VM_IP"
+  $DRY_RUN || die "env/vm.env not found. Run: cp env/vm.env.example env/vm.env and fill it in"
+  print_info "env/vm.env not found — OK for --dry-run, .env updates will use placeholder VM_IP"
   VM_IP="${VM_IP:-VM_IP_NOT_SET}"
 fi
 
@@ -196,10 +196,10 @@ if $DRY_RUN; then
   exit 0
 fi
 
-: "${PORTAINER_URL:?set in vm.env}"
-: "${PORTAINER_API_KEY:?set in vm.env}"
-: "${PORTAINER_ENDPOINT_ID:?set in vm.env}"
-: "${PORTAINER_STACK_NAME:?set in vm.env}"
+: "${PORTAINER_URL:?set in env/vm.env}"
+: "${PORTAINER_API_KEY:?set in env/vm.env}"
+: "${PORTAINER_ENDPOINT_ID:?set in env/vm.env}"
+: "${PORTAINER_STACK_NAME:?set in env/vm.env}"
 
 auth=(-H "X-API-Key: ${PORTAINER_API_KEY}")
 
@@ -222,7 +222,7 @@ portainer_call() {
 portainer_call GET "$PORTAINER_URL/api/endpoints"
 [ "$REPLY_CODE" = "200" ] || die "Cannot list Portainer endpoints (HTTP $REPLY_CODE): $REPLY_BODY"
 if ! jq -e --argjson id "$PORTAINER_ENDPOINT_ID" '.[] | select(.Id==$id)' <<<"$REPLY_BODY" >/dev/null; then
-  die "Endpoint ID $PORTAINER_ENDPOINT_ID not found in Portainer. Available endpoints: $(jq -r 'map("\(.Id)=\(.Name)") | join(", ")' <<<"$REPLY_BODY"). Fix PORTAINER_ENDPOINT_ID in vm.env"
+  die "Endpoint ID $PORTAINER_ENDPOINT_ID not found in Portainer. Available endpoints: $(jq -r 'map("\(.Id)=\(.Name)") | join(", ")' <<<"$REPLY_BODY"). Fix PORTAINER_ENDPOINT_ID in env/vm.env"
 fi
 
 print_info "Looking up stack '$PORTAINER_STACK_NAME' at $PORTAINER_URL ..."
@@ -248,13 +248,38 @@ merge_env() {
      | ($a | map(select(.name as $n | $names | index($n) | not))) + $b'
 }
 
-# Base stack env (GIT_URI, CONFIG_SERVER_*, RABBITMQ_*, ...) from .env.vm
-STACK_ENV_FILE="$REPO_ROOT/.env.vm"
+# Validate that the base stack env file contains the shared keys the compose
+# file cannot start without. DB credentials are added separately from project .env.
+validate_base_stack_env() {
+  local env_json="$1"
+  local missing=() key
+  local required=(
+    GIT_URI ENCRYPT_KEY
+    CONFIG_SERVER_USERNAME CONFIG_SERVER_PASSWORD
+    RABBITMQ_DEFAULT_USER RABBITMQ_DEFAULT_PASS
+    DOCKERHUB_TOKEN
+    EVENT_DOMAIN_USER EVENT_DOMAIN_USER_PASSWORD
+  )
+  for key in "${required[@]}"; do
+    if ! jq -e --arg k "$key" 'map(.name) | index($k) != null' <<<"$env_json" >/dev/null; then
+      missing+=("$key")
+    fi
+  done
+  if [ ${#missing[@]} -gt 0 ]; then
+    print_error "Missing required base env vars in $STACK_ENV_FILE: ${missing[*]}"
+    print_info  "Copy env/.env.vm.example to env/.env.vm and fill in real values."
+    exit 1
+  fi
+}
+
+# Base stack env (GIT_URI, CONFIG_SERVER_*, RABBITMQ_*, ...) from env/.env.vm
+STACK_ENV_FILE="$REPO_ROOT/env/.env.vm"
 base_env=$(env_file_to_json "$STACK_ENV_FILE")
+validate_base_stack_env "$base_env"
 if [ "$(jq 'length' <<<"$base_env")" -gt 0 ]; then
-  print_info "Pushing $(jq 'length' <<<"$base_env") base env var(s) from .env.vm"
+  print_info "Pushing $(jq 'length' <<<"$base_env") base env var(s) from env/.env.vm"
 else
-  print_info "No .env.vm found — only DB env vars will be pushed (config-server/rabbitmq need GIT_URI etc. to become healthy!)"
+  print_info "No env/.env.vm found — only DB env vars will be pushed (config-server/rabbitmq need GIT_URI etc. to become healthy!)"
 fi
 
 # Env entries this script owns (values read from each project's local .env)
@@ -269,7 +294,7 @@ content=$(jq -Rs . < "$STACK_FILE")
 if [ -n "$stack_id" ]; then
   # Merge: keep existing stack env (GIT_URI, RABBITMQ_*, ...) — ours win on conflict
   existing_env=$(curl -fsS "${auth[@]}" "$PORTAINER_URL/api/stacks/$stack_id" | jq '.Env // []')
-  # precedence: .env.vm < existing stack env (Portainer UI edits) < DB vars
+  # precedence: env/.env.vm < existing stack env (Portainer UI edits) < DB vars
   merged_env=$(merge_env "$base_env" "$existing_env")
   merged_env=$(merge_env "$merged_env" "$our_env")
   body=$(jq -n \

@@ -69,7 +69,7 @@ resource "random_password" "db_password" {
   special = true
 }
 
-# Store password in .env.cloud for later use
+# Store password in env/.env.cloud for later use
 output "database_password" {
   value       = random_password.db_password.result
   description = "Database password (generated once)"

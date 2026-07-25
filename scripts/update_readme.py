@@ -38,12 +38,12 @@ LOCAL_SCRIPTS = [
 ]
 
 CLOUD_SCRIPTS = {
-    "DigitalOcean": ["cloud-start.sh", "cloud-stop.sh"],
-    "Azure ACG": ["acg-start.sh", "acg-stop.sh"],
-    "AWS ACG": ["acg-aws-start.sh", "acg-aws-stop.sh"],
+    "DigitalOcean": ["scripts/cloud/cloud-start.sh", "scripts/cloud/cloud-stop.sh"],
+    "Azure ACG": ["scripts/acg/acg-start.sh", "scripts/acg/acg-stop.sh"],
+    "AWS ACG": ["scripts/acg/acg-aws-start.sh", "scripts/acg/acg-aws-stop.sh"],
 }
 
-RABBITMQ_SCRIPTS = ["rabbitmq-manager.sh", "start-rabbitmq.sh", "stop-rabbitmq.sh"]
+RABBITMQ_SCRIPTS = ["scripts/local/rabbitmq-manager.sh"]
 
 
 def alias(name: str) -> str:

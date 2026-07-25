@@ -7,7 +7,7 @@ set -euo pipefail
 #
 #   1. Config/deploy name drift: a config-server YAML (jubilant-memory)
 #      references ${SOME_VAR}, but the place that's supposed to set it
-#      (the VM's docker-compose-vm.yml service block, or
+#      (the VM's compose/docker-compose-vm.yml service block, or
 #      the project's own local .env when not yet deployed on the VM)
 #      never defines a literal key with that exact name. This is the
 #      bug that broke eventstracker (EVENT_DOMAIN_USER casing,
@@ -27,13 +27,13 @@ set -euo pipefail
 # Usage:
 #   ./check-stack-consistency.sh            # both checks
 #   ./check-stack-consistency.sh --config   # only the config/deploy check (no VM access needed)
-#   ./check-stack-consistency.sh --roles    # only the Postgres role-drift check (needs vm.env)
+#   ./check-stack-consistency.sh --roles    # only the Postgres role-drift check (needs env/vm.env)
 #################################################################
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 WORKSPACE_ROOT="$(cd "$REPO_ROOT/.." && pwd)"
-STACK_FILE="$REPO_ROOT/docker-compose-vm.yml"
+STACK_FILE="$REPO_ROOT/compose/docker-compose-vm.yml"
 
 PROJECT_ROOT="$WORKSPACE_ROOT"
 source "$REPO_ROOT/scripts/lib/project-config.sh"
@@ -117,7 +117,7 @@ if $RUN_CONFIG; then
 
     if [ -n "$service" ]; then
       defined=$(extract_compose_env_keys "$service")
-      source_desc="docker-compose-vm.yml service '$service'"
+      source_desc="compose/docker-compose-vm.yml service '$service'"
     else
       env_file="$WORKSPACE_ROOT/$project/.env"
       if [ ! -f "$env_file" ]; then
@@ -147,14 +147,14 @@ fi
 
 if $RUN_ROLES; then
   echo "=== Postgres role drift (VM) ==="
-  VM_ENV_FILE="$REPO_ROOT/vm.env"
+  VM_ENV_FILE="$REPO_ROOT/env/vm.env"
   if [ ! -f "$VM_ENV_FILE" ]; then
-    echo -e "${YELLOW}skip${NC} vm.env not found — cannot reach Portainer to check live roles"
+    echo -e "${YELLOW}skip${NC} env/vm.env not found — cannot reach Portainer to check live roles"
   else
     # shellcheck disable=SC1090
     source "$VM_ENV_FILE"
-    : "${PORTAINER_URL:?set in vm.env}"; : "${PORTAINER_API_KEY:?set in vm.env}"; : "${PORTAINER_ENDPOINT_ID:?set in vm.env}"
-    : "${PORTAINER_STACK_NAME:?set in vm.env}"
+    : "${PORTAINER_URL:?set in env/vm.env}"; : "${PORTAINER_API_KEY:?set in env/vm.env}"; : "${PORTAINER_ENDPOINT_ID:?set in env/vm.env}"
+    : "${PORTAINER_STACK_NAME:?set in env/vm.env}"
     auth=(-H "X-API-Key: ${PORTAINER_API_KEY}")
 
     stacks_json=$(curl -fsS "${auth[@]}" "${PORTAINER_URL}/api/stacks") \

@@ -10,21 +10,29 @@ version: "3.9"
 #   consolidated-postgres/scripts/vm/vm-db-up.sh <project...>
 # Do not hand-edit inside the markers — your changes will be overwritten.
 #
-# Required env vars (set in Portainer stack → Environment tab; vm-db-up.sh
-# pushes the DB ones automatically from each project's local .env):
-#   DOCKERHUB_USERNAME        your Docker Hub username (travelhelper0h)
-#   GIT_URI                   git repo URI for Spring Cloud Config
-#   ENCRYPT_KEY               Spring Cloud Config encrypt.key
-#   CONFIG_SERVER_USERNAME    basic-auth username for config server
-#   CONFIG_SERVER_PASSWORD    basic-auth password for config server
-#   EVENTS_TRACKER_DB_NAME / _USER / _PASSWORD      eventstracker DB
-#   RUNS_APP_DB_NAME / _USER / _PASSWORD            runs-app DB (when enabled)
-#   RUNS_AI_ANALYZER_DB_NAME / _USER / _PASSWORD    runs-ai-analyzer DB (when enabled)
-#   GITHUB_CLEANER_DB_NAME / _USER / _PASSWORD      verbose-barnacle DB (when enabled)
-#   DBCLEANER_DB_NAME / _USER / _PASSWORD           dbcleaner DB (when enabled)
-#   RABBITMQ_DEFAULT_USER     RabbitMQ admin user
-#   RABBITMQ_DEFAULT_PASS     RabbitMQ admin password
-#   DOCKERHUB_TOKEN           Docker Hub token (needed by watchtower)
+# Required env vars (set in Portainer stack → Environment tab). A complete
+# template lives in env/.env.vm.example — copy it to env/.env.vm (gitignored) and
+# fill in real values. When using scripts/vm/vm-db-up.sh, DB credentials are
+# pushed automatically from each project's local .env, but the base vars
+# below must still be present in env/.env.vm:
+#
+#   Base / shared:
+#     GIT_URI                        git repo URI for Spring Cloud Config
+#     ENCRYPT_KEY                    Spring Cloud Config encrypt.key
+#     CONFIG_SERVER_USERNAME         basic-auth username for config server
+#     CONFIG_SERVER_PASSWORD         basic-auth password for config server
+#     RABBITMQ_DEFAULT_USER          RabbitMQ admin user
+#     RABBITMQ_DEFAULT_PASS          RabbitMQ admin password
+#     DOCKERHUB_TOKEN                Docker Hub token (used by watchtower)
+#     EVENT_DOMAIN_USER              initial event-domain user for eventstracker
+#     EVENT_DOMAIN_USER_PASSWORD     password for the initial event-domain user
+#
+#   Project databases (eventstracker is always required):
+#     EVENTS_TRACKER_DB_NAME / _USER / _PASSWORD
+#     RUNS_APP_DB_NAME / _USER / _PASSWORD            (when enabled)
+#     RUNS_AI_ANALYZER_DB_NAME / _USER / _PASSWORD    (when enabled)
+#     GITHUB_CLEANER_DB_NAME / _USER / _PASSWORD      (when enabled)
+#     DBCLEANER_DB_NAME / _USER / _PASSWORD           (when enabled)
 # ─────────────────────────────────────────────────────────────────────────────
 
 services:

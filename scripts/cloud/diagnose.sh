@@ -4,10 +4,15 @@ set -euo pipefail
 #################################################################
 # Diagnostic Script - Check what's happening with cloud-start.sh
 #
-# Usage: ./diagnose.sh
+# Usage: ./scripts/cloud/diagnose.sh
 #
-# This script will help identify where ./cloud-start.sh is stopping
+# This script will help identify where ./scripts/cloud/cloud-start.sh is stopping
 #################################################################
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+cd "$SCRIPT_DIR"
 
 echo "=========================================="
 echo "Cloud Setup Diagnostic Script"
@@ -124,7 +129,7 @@ echo "=========================================="
 echo "✅ All checks passed!"
 echo "=========================================="
 echo ""
-echo "Next step: Run ./cloud-start.sh"
+echo "Next step: Run ./scripts/cloud/cloud-start.sh"
 echo ""
 echo "When it asks 'Continue with creation? (yes/no)'"
 echo "Type: yes"

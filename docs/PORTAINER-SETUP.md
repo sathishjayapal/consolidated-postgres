@@ -111,7 +111,7 @@ docker buildx build --platform linux/amd64 \
 1. Open Portainer at `http://<vm-ip>:9000`
 2. Go to **Stacks → + Add stack**
 3. Name it `sathish-stack`
-4. Select **Web editor** and paste the contents of `docker-compose-vm.yml` (at the repo root)
+4. Select **Web editor** and paste the contents of `compose/docker-compose-vm.yml` (in the `compose/` folder)
 5. Scroll to **Environment variables** and add:
 
 | Variable                 | Value                                          |

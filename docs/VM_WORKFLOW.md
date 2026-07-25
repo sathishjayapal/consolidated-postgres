@@ -7,7 +7,7 @@ Your Mac                                    VirtualBox VM (bridged, own LAN IP)
 ────────                                    ───────────────────────────────────
 scripts/vm/vm-db-up.sh <projects...>        Portainer :9000
   1. regenerates the managed block in         └── sathish-stack
-     docker-compose-vm.yml         ├── postgres            :6433  (eventstracker, always on)
+     compose/docker-compose-vm.yml         ├── postgres            :6433  (eventstracker, always on)
   2. syncs each project's own compose port          ├── runs-app-db         :5443  (when selected)
   3. points project .env at the VM                  ├── runs-ai-analyzer-db :5444  (when selected, pgvector)
   4. PUTs the stack via the Portainer API           └── … config-server, rabbitmq, apps, watchtower
@@ -18,13 +18,20 @@ scripts/vm/vm-db-up.sh <projects...>        Portainer :9000
 
 ```bash
 cd consolidated-postgres
-cp vm.env.example vm.env    # fill in VM_IP, Portainer API key, endpoint ID
+cp env/vm.env.example env/vm.env    # fill in VM_IP, Portainer API key, endpoint ID
+cp env/.env.vm.example env/.env.vm # fill in secrets + DB credentials (fallback values)
 ```
 
 Create the API key in Portainer: user icon → My account → Access tokens.
 
+- `env/vm.env` tells `vm-db-up.sh` how to reach Portainer.
+- `env/.env.vm` becomes the base environment pushed into the Portainer stack.
+- Project DB credentials are merged in automatically from each project's local `.env`.
+
 Each project you select must have a local `.env` (run its `dev-up.sh` once) — the script reads DB user/password from
 there and pushes them into the Portainer stack environment, so credentials stay identical between local and VM.
+
+See [ENVIRONMENTS.md](ENVIRONMENTS.md) for the full file/target map.
 
 ## Usage
 
@@ -32,7 +39,7 @@ there and pushes them into the Portainer stack environment, so credentials stay 
 # Bring up runs-app + runs-ai-analyzer DBs on the VM (eventstracker DB is always included)
 ./scripts/vm/vm-db-up.sh runs-app runs-ai-analyzer
 
-# Preview without deploying (also skips Portainer, works without vm.env)
+# Preview without deploying (also skips Portainer, works without env/vm.env)
 ./scripts/vm/vm-db-up.sh --dry-run runs-app
 
 # Update stack but leave project .env files alone
@@ -57,7 +64,7 @@ there and pushes them into the Portainer stack environment, so credentials stay 
 
 verbose-barnacle and dbcleaner have no `dev-up.sh`, so the local multi-dev scripts skip them; their credentials fall
 back to the defaults hardcoded in their own docker-compose files (add a `.env` to override). Both are also provisioned
-by the ACG scripts (`acg-start.sh`, `acg-aws-start.sh`) with dumps taken on teardown.
+by the ACG scripts (`scripts/acg/acg-start.sh`, `scripts/acg/acg-aws-start.sh`) with dumps taken on teardown.
 
 Connect from the Mac: `psql -h <VM_IP> -p <port> -U <user> -d <database>`
 
@@ -65,7 +72,7 @@ Connect from the Mac: `psql -h <VM_IP> -p <port> -U <user> -d <database>`
 
 | File                                                                                | What changes                                                                                                                          |
 |-------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------|
-| `docker-compose-vm.yml`                                            | Only the text between `# >>> PROJECT-DBS:START/END` and `# >>> PROJECT-DB-VOLUMES:START/END` markers — never edit inside them by hand |
+| `compose/docker-compose-vm.yml`                                            | Only the text between `# >>> PROJECT-DBS:START/END` and `# >>> PROJECT-DB-VOLUMES:START/END` markers — never edit inside them by hand |
 | Selected project's `docker-compose.yml` (eventstracker → `jubilant-memory/config/`) | Host-port mapping kept in sync with `project-config.sh`                                                                               |
 | Selected project's `.env`                                                           | The JDBC URL key is rewritten to `jdbc:postgresql://<VM_IP or localhost>:<port>/<db>`; a `.env.bak` backup is made first              |
 

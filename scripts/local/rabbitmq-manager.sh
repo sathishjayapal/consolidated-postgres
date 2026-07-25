@@ -5,15 +5,12 @@
 
 set -e  # Exit on error
 
-# Resolve compose file relative to this script so it works from any machine/folder.
+# Resolve compose file relative to repo root so it works from any machine/folder.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [ -f "$SCRIPT_DIR/rabbitmq-compose.yml" ]; then
-    COMPOSE_FILE="$SCRIPT_DIR/rabbitmq-compose.yml"
-elif [ -f "$SCRIPT_DIR/rabbit-compose.yml" ]; then
-    COMPOSE_FILE="$SCRIPT_DIR/rabbit-compose.yml"
-else
-    echo "❌ Could not find rabbit compose file in: $SCRIPT_DIR"
-    echo "Expected one of: rabbitmq-compose.yml or rabbit-compose.yml"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+COMPOSE_FILE="$REPO_ROOT/compose/rabbitmq-compose.yml"
+if [ ! -f "$COMPOSE_FILE" ]; then
+    echo "❌ Could not find rabbit compose file: $COMPOSE_FILE"
     exit 1
 fi
 PROJECT_NAME="consolidated-postgres"

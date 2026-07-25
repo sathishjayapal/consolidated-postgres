@@ -12,10 +12,10 @@ it starts, stops, verifies, and tears down the PostgreSQL databases and RabbitMQ
 | `scripts/local/`                                                                       | Local dev orchestration — `multi-dev-up.sh`, `multi-dev-down.sh`, `multi-dev-verify.sh`, `start-all-services.sh`, `stop-all-services.sh` |
 | `scripts/lib/project-config.sh`                                                        | Shared project metadata (ports, DB names, containers, env keys)                                                                          |
 | `projects.txt`                                                                         | Source of truth for which projects are managed by the orchestration scripts                                                              |
-| `cloud-start.sh` / `cloud-stop.sh`                                                     | DigitalOcean managed Postgres, on-demand                                                                                                 |
-| `acg-start.sh` / `acg-stop.sh`                                                         | Azure ACG sandbox — Postgres Flexible Server                                                                                             |
-| `acg-aws-start.sh` / `acg-aws-stop.sh`                                                 | AWS ACG sandbox — Docker `pgvector` on EC2 via SSM tunnel                                                                                |
-| `rabbitmq-manager.sh`, `rabbitmq-compose.yml` | RabbitMQ lifecycle                                                                                                                       |
+| `scripts/cloud/cloud-start.sh` / `scripts/cloud/cloud-stop.sh`                                                     | DigitalOcean managed Postgres, on-demand                                                                                                 |
+| `scripts/acg/acg-start.sh` / `scripts/acg/acg-stop.sh`                                                         | Azure ACG sandbox — Postgres Flexible Server                                                                                             |
+| `scripts/acg/acg-aws-start.sh` / `scripts/acg/acg-aws-stop.sh`                                                 | AWS ACG sandbox — Docker `pgvector` on EC2 via SSM tunnel                                                                                |
+| `scripts/local/rabbitmq-manager.sh`, `compose/rabbitmq-compose.yml` | RabbitMQ lifecycle                                                                                                                       |
 | `tests/`                                                                               | bats test suites — run with `./tests/run-tests.sh`                                                                                       |
 | `backups/`                                                                             | `pg_dump` output from cloud teardown (gitignored)                                                                                        |
 | `docs/`                                                                                | Workflow and architecture docs                                                                                                           |
@@ -23,7 +23,7 @@ it starts, stops, verifies, and tears down the PostgreSQL databases and RabbitMQ
 ## Architecture
 
 <!-- AUTO-GENERATED:ARCHITECTURE:START -->
-![Architecture diagram](https://www.plantuml.com/plantuml/svg/XLKxRzim4DxrAmwPue7Etg58a09P4iIkXmn58PobYyo68XMISfeK_UyzKGzJbfHkvlSW-Ttnv6ldqVgwL8cNNX5aHZkZP8wUSb4PvmjB3eG0OxC3EM_HIwEXn0ekiVP65AJ9DkfLubwahj1YoRkKbT6a_Sw_ywQMCe-wK9GeUlRW3LXP73paic5uloIfC7l1Wk3YtcIeu34-xGB-900_obfvAN8wYhfQkyDFG0S1InbBwofrXx4iDszwAcpGYVH8LZw_JyKjtib3gGGg9HpPeyp8zOR0fCoaFJDOJBNWCDN4y3UgmwqoTJvRXs-oa1xLOqQeuJ9hT29SWFU6A-W1qnHf5GwB7SqEDn-r9RYvlUCUPaLiRfUHDKXJbWRVq-xamZTtxcoXsFsq2zuus7VSxwL_sC83QWPAVYLTC1kOybMKWR5zhNeyxV1HEtfot8h14hLXgkGMnCBubktbSjXOyulVg8FBglkrzh_zghin7VdsJNko5x9Xqn4IGjNQ2QogDWalKbwS22du8FN-qTbRWKnxi17o6zmRHsAFLcEcA0WxCEt1HfZl-GVgRgjXrUJYUSOzEWws8IkwAB1fvtktlRze79kxvBMcEkfHW1-sIN8sP_n1-7eMTKunn5qcewXpeadCET4fwHpBgUPWJZKxjJFHbdL3mFz9efZBqadOPUafyhA6Wo-J77_q7MaDy0NuRHobuw-DIuRPdsVRsPxbPYPsNFHex4x4U1nxVDGBMA-xqonXxgxUhFJ4vtLz-9G-zM11Tbx_1TbG-mN-cdJU_A7-0m00)
+![Architecture diagram](https://www.plantuml.com/plantuml/svg/XLMnRjim4Dtr5OTCoK1dxr0aI84i2UBKGuQY4CxIHMP3aGn9EKsA_dkFb6JBDfKEDiHxxnxrdddqbG_eGjUg8iYW22gZlL6ona2riCQ7nf478S2uQaC-E0pIQ6ZHmZbsmOY6DBd8lYZyYzGM7RQiqbgZIOTLU6THHrL0tIWg53q720QSR3O1QXaHrYiAYzKBDWHdTwP21G_JtSxWJm7me-rKaAAchUZimcz-0df8jP9hPMTBlpcarUPDdn9ZzOIw9IUVtq_9VNsWfwW4AYKykQsio8yD2IaPAKTarsBiJ8Un9mr_9pdSADFLsHo-oKO6L0yLeOPpNpbfWx-i8h__5kbrU2UuX3niOe0NwKMcQb7z-gDp1DStjtjfh9huoSdkeObaaYXP8kazhV9g-EO_K-pXgUhJAcbEG_gEwxKCzuzmZveBBP-u8IINaFPLj0bnO-vZlHpgnx7tGZKidVd5PzF3kHsU5k5tk1ZKQSixnP-bUY6NT0ygwGKwxGLQs-_AYv8NUq0AtaYzVmpjFK6MOp4I-UojZIUnHgUnKfI8Gx4SYv5Oh_a1zI2rMqLVFCUuHi_6bkJ4O0MM_Lol7k_EOiVojdZjg9lacShtZqLnD5zy4NmziffZxEpEWnEhETA9pHnfxpI7igjScLrbfpLZRPwtC_W_oiJcFFN4x3nrRtcUmyRdGRP_S7_q3V05-6nifUTRnXUx-SsZ_HnciSnqZRiUH0kBnT3i26j_-UPa86uVOlqKtaSwGpkESuQsYt86lo9Tn__5Vm00)
 
 <details>
 <summary>PlantUML source (also at <code>docs/architecture.puml</code>)</summary>
@@ -43,9 +43,9 @@ package "Local Orchestration" {
 }
 
 package "Cloud Orchestration" {
-  [DigitalOcean (cloud-start.sh / cloud-stop.sh)] as DigitalOcean
-  [Azure ACG (acg-start.sh / acg-stop.sh)] as Azure_ACG
-  [AWS ACG (acg-aws-start.sh / acg-aws-stop.sh)] as AWS_ACG
+  [DigitalOcean (scripts/cloud/cloud-start.sh / scripts/cloud/cloud-stop.sh)] as DigitalOcean
+  [Azure ACG (scripts/acg/acg-start.sh / scripts/acg/acg-stop.sh)] as Azure_ACG
+  [AWS ACG (scripts/acg/acg-aws-start.sh / scripts/acg/acg-aws-stop.sh)] as AWS_ACG
 }
 
 package "RabbitMQ Management" {
@@ -113,28 +113,34 @@ Reset to a clean slate: `./scripts/local/multi-dev-up.sh --reset`
 Run persisted project databases on the VirtualBox VM instead of (or alongside) local Docker:
 
 ```bash
-cp vm.env.example vm.env                          # one-time: VM IP + Portainer API key
+cp env/vm.env.example env/vm.env                          # one-time: VM IP + Portainer API key
+cp env/.env.vm.example env/.env.vm                       # one-time: stack env vars (secrets)
 ./scripts/vm/vm-db-up.sh runs-app runs-ai-analyzer  # DBs for the projects you pass
 ```
 
-Regenerates the managed block in `docker-compose-vm.yml`, syncs each selected project's own compose
+Regenerates the managed block in `compose/docker-compose-vm.yml`, syncs each selected project's own compose
 file, rewrites its `.env` JDBC URL to the VM (or back to localhost with `--target local`), and redeploys the Portainer
-stack via API. Data lives in named volumes on the VM. See [docs/VM_WORKFLOW.md](docs/VM_WORKFLOW.md).
+stack via API. Data lives in named volumes on the VM.
+
+- `env/vm.env` — how `vm-db-up.sh` talks to Portainer.
+- `env/.env.vm` — the environment variables pushed **into** the Portainer stack.
+
+See [docs/VM_WORKFLOW.md](docs/VM_WORKFLOW.md) and the new [docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md) for the full environment map.
 
 ## Cloud database options
 
 | Scripts                                | Provider          | Notes                                                                                                                                      |
 |----------------------------------------|-------------------|--------------------------------------------------------------------------------------------------------------------------------------------|
-| `cloud-start.sh` / `cloud-stop.sh`     | DigitalOcean      | Managed Postgres cluster, ~$0.50/day while running                                                                                         |
-| `acg-start.sh` / `acg-stop.sh`         | Azure ACG sandbox | Postgres Flexible Server via targeted `terraform apply` against `../iAC-NikeRuns`                                                          |
-| `acg-aws-start.sh` / `acg-aws-stop.sh` | AWS ACG sandbox   | `pgvector/pgvector:pg16` in Docker on an EC2 t3.micro, reached via SSM port-forwarding tunnel (managed RDS is blocked by SCP `p-cr6s9vs4`) |
+| `scripts/cloud/cloud-start.sh` / `scripts/cloud/cloud-stop.sh`     | DigitalOcean      | Managed Postgres cluster, ~$0.50/day while running                                                                                         |
+| `scripts/acg/acg-start.sh` / `scripts/acg/acg-stop.sh`         | Azure ACG sandbox | Postgres Flexible Server via targeted `terraform apply` against `../iAC-NikeRuns`                                                          |
+| `scripts/acg/acg-aws-start.sh` / `scripts/acg/acg-aws-stop.sh` | AWS ACG sandbox   | `pgvector/pgvector:pg16` in Docker on an EC2 t3.micro, reached via SSM port-forwarding tunnel (managed RDS is blocked by SCP `p-cr6s9vs4`) |
 
 All three `*-stop.sh` scripts `pg_dump` every database to `backups/` before tearing down infrastructure.
 
 ## RabbitMQ
 
 ```bash
-./rabbitmq-manager.sh start|stop|restart|status|logs|clean
+./scripts/local/rabbitmq-manager.sh start|stop|restart|status|logs|clean
 ```
 
 See [RABBITMQ-README.md](RABBITMQ-README.md) for details.
@@ -150,6 +156,7 @@ See [RABBITMQ-README.md](RABBITMQ-README.md) for details.
 ## Documentation index
 
 - [START_HERE.md](START_HERE.md) — prerequisites & new-machine setup
+- [docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md) — environment decision tree & file map (local / VM / ACG / cloud)
 - [docs/LOCAL_ENV_WORKFLOW.md](docs/LOCAL_ENV_WORKFLOW.md) — local/cloud toggle & guardrails
 - [EVENT_DRIVEN_STARTUP.md](EVENT_DRIVEN_STARTUP.md) — correct service startup order
 - [RABBITMQ-README.md](RABBITMQ-README.md) — RabbitMQ management utilities
@@ -157,30 +164,30 @@ See [RABBITMQ-README.md](RABBITMQ-README.md) for details.
 ## Repository status
 
 <!-- AUTO-GENERATED:STATUS:START -->
-_Generated from `projects.txt` and the scripts present in the repo as of `725ec01`._
+_Generated from `projects.txt` and the scripts present in the repo as of `36cf298`._
 
-| Script                                | Present | Description                                                                 |
-|---------------------------------------|---------|-----------------------------------------------------------------------------|
-| `scripts/local/multi-dev-up.sh`       | yes     | Multi-project Development Environment Startup                               |
-| `scripts/local/multi-dev-down.sh`     | yes     | Multi-project Development Environment Shutdown                              |
-| `scripts/local/multi-dev-verify.sh`   | yes     | Guardrail verification script to ensure our multi-service local environment |
-| `scripts/local/start-all-services.sh` | yes     | Automated Service Startup with Correct Ordering                             |
-| `scripts/local/stop-all-services.sh`  | yes     | Stop All Spring Boot Services                                               |
-| `cloud-start.sh`                      | yes     | On-Demand Cloud Database Startup                                            |
-| `cloud-stop.sh`                       | yes     | On-Demand Cloud Database Shutdown                                           |
-| `acg-start.sh`                        | yes     | ACG Azure Sandbox — Shared PostgreSQL Startup                               |
-| `acg-stop.sh`                         | yes     | ACG Azure Sandbox — PostgreSQL Teardown                                     |
-| `acg-aws-start.sh`                    | yes     | ACG AWS Sandbox — PostgreSQL via SSM (Docker on EC2)                        |
-| `acg-aws-stop.sh`                     | yes     | ACG AWS Sandbox — PostgreSQL Teardown                                       |
-| `rabbitmq-manager.sh`                 | yes     | RabbitMQ Manager - Comprehensive utility for managing RabbitMQ containers   |
+| Script | Present | Description |
+|---|---|---|
+| `scripts/local/multi-dev-up.sh` | yes | Multi-project Development Environment Startup |
+| `scripts/local/multi-dev-down.sh` | yes | Multi-project Development Environment Shutdown |
+| `scripts/local/multi-dev-verify.sh` | yes | Guardrail verification script to ensure our multi-service local environment |
+| `scripts/local/start-all-services.sh` | yes | Automated Service Startup with Correct Ordering |
+| `scripts/local/stop-all-services.sh` | yes | Stop All Spring Boot Services |
+| `scripts/cloud/cloud-start.sh` | yes | On-Demand Cloud Database Startup |
+| `scripts/cloud/cloud-stop.sh` | yes | On-Demand Cloud Database Shutdown |
+| `scripts/acg/acg-start.sh` | yes | ACG Azure Sandbox — Shared PostgreSQL Startup |
+| `scripts/acg/acg-stop.sh` | yes | ACG Azure Sandbox — PostgreSQL Teardown |
+| `scripts/acg/acg-aws-start.sh` | yes | ACG AWS Sandbox — PostgreSQL via SSM (Docker on EC2) |
+| `scripts/acg/acg-aws-stop.sh` | yes | ACG AWS Sandbox — PostgreSQL Teardown |
+| `scripts/local/rabbitmq-manager.sh` | yes | RabbitMQ Manager - Comprehensive utility for managing RabbitMQ containers |
 
-| Managed project    | DB port | DB name               |
-|--------------------|---------|-----------------------|
-| `eventstracker`    | 6433    | `event-service`       |
-| `runs-app`         | 5443    | `runsapp_db`          |
-| `runs-ai-analyzer` | 5444    | `runs_ai_analyzer_db` |
-| `verbose-barnacle` | 5439    | `my-github-cleaner`   |
-| `dbcleaner`        | 5433    | `dbcleaner`           |
+| Managed project | DB port | DB name |
+|---|---|---|
+| `eventstracker` | 6433 | `event-service` |
+| `runs-app` | 5443 | `runsapp_db` |
+| `runs-ai-analyzer` | 5444 | `runs_ai_analyzer_db` |
+| `verbose-barnacle` | 5439 | `my-github-cleaner` |
+| `dbcleaner` | 5433 | `dbcleaner` |
 <!-- AUTO-GENERATED:STATUS:END -->
 
 ## Keeping this README in sync

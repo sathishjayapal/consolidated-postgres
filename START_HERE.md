@@ -30,9 +30,9 @@ cd eventstracker
 ## Cloud Infrastructure Status
 
 **⚠️ IMPORTANT LIMITATION:**
-- ✅ `cloud-start.sh` works on ANY computer (creates infrastructure)
-- ✅ `diagnose.sh` works on ANY computer (validates setup)
-- ❌ `cloud-stop.sh` works ONLY on Tahoe (macOS 12.7.6 has socket errors)
+- ✅ `scripts/cloud/cloud-start.sh` works on ANY computer (creates infrastructure)
+- ✅ `scripts/cloud/diagnose.sh` works on ANY computer (validates setup)
+- ❌ `scripts/cloud/cloud-stop.sh` works ONLY on Tahoe (macOS 12.7.6 has socket errors)
 
 **To shutdown infrastructure: Use Tahoe Mac**
 
@@ -150,15 +150,15 @@ These files are ESSENTIAL for the scripts to work:
 
 | File | Purpose | Must Exist |
 |------|---------|-----------|
-| `terraform.tf` | Infrastructure definition | ✅ Yes |
+| `scripts/cloud/terraform.tf` | Infrastructure definition | ✅ Yes |
 | `terraform.tfvars` | DigitalOcean API token & config | ✅ Yes |
-| `variables.tf` | Terraform variables | ✅ Yes |
-| `.env.cloud` | Generated after `cloud-start.sh` | ⚠️ After creation |
+| `scripts/cloud/variables.tf` | Terraform variables | ✅ Yes |
+| `env/.env.cloud` | Generated after `scripts/cloud/cloud-start.sh` | ⚠️ After creation |
 | `terraform.tfstate` | Infrastructure tracking | ⚠️ After creation |
 
 **Check required files:**
 ```bash
-ls -l terraform.tf terraform.tfvars variables.tf
+ls -l scripts/cloud/terraform.tf terraform.tfvars scripts/cloud/variables.tf
 ```
 
 All three must exist and have content.
@@ -171,12 +171,12 @@ All three must exist and have content.
 
 **Prerequisites:**
 - ✅ Terraform installed
-- ✅ DigitalOcean API token in `terraform.tfvars`
+- ✅ DigitalOcean API token in `scripts/cloud/terraform.tfvars`
 - ✅ All three terraform files exist
 
 **Run:**
 ```bash
-./cloud-start.sh
+./scripts/cloud/cloud-start.sh
 ```
 
 **When prompted:**
@@ -188,7 +188,7 @@ Type: `yes`
 **Result:**
 - ✅ PostgreSQL cluster created on DigitalOcean
 - ✅ 3 databases created (eventstracker_db, runsapp_db, runsai_db)
-- ✅ `.env.cloud` file generated with connection details
+- ✅ `env/.env.cloud` file generated with connection details
 - ✅ `terraform.tfstate` created (tracks infrastructure)
 - ⏱️ Takes 3-5 minutes
 - 💰 Starts costing $0.67/day
@@ -199,11 +199,11 @@ Type: `yes`
 - ✅ Terraform installed
 - ✅ PostgreSQL client tools installed (psql, pg_dump)
 - ✅ `terraform.tfstate` exists (infrastructure was created)
-- ✅ `.env.cloud` exists (connection details)
+- ✅ `env/.env.cloud` exists (connection details)
 
 **Run:**
 ```bash
-./cloud-stop.sh
+./scripts/cloud/cloud-stop.sh
 ```
 
 **When prompted:**
@@ -226,7 +226,7 @@ Type: `yes`
 
 **Run:**
 ```bash
-./diagnose.sh
+./scripts/cloud/diagnose.sh
 ```
 
 **Result:**
@@ -263,7 +263,7 @@ Type: `yes`
    cd consolidated-postgres
    ```
    - Create `terraform.tfvars` with your DigitalOcean API token (not in git — see Important Notes)
-   - `.env.cloud` is only needed if infrastructure already exists
+   - `env/.env.cloud` is only needed if infrastructure already exists
    - `terraform.tfstate` is only needed if infrastructure already exists
 
 3. **Navigate to Folder**
@@ -273,26 +273,26 @@ Type: `yes`
 
 4. **Run Diagnostic** (verify setup)
    ```bash
-   ./diagnose.sh
+   ./scripts/cloud/diagnose.sh
    ```
 
 5. **Create Infrastructure** (if needed)
    ```bash
-   ./cloud-start.sh
+   ./scripts/cloud/cloud-start.sh
    # Type: yes
    # Wait 3-5 minutes
    ```
 
 6. **Stop Infrastructure** (when done coding)
    ```bash
-   ./cloud-stop.sh
+   ./scripts/cloud/cloud-stop.sh
    # Type: yes
    # Wait 1-2 minutes
    ```
 
 ### For a Machine With Existing Infrastructure
 
-If `terraform.tfstate` and `.env.cloud` already exist:
+If `terraform.tfstate` and `env/.env.cloud` already exist:
 
 1. **Install Prerequisites** (same as above)
 
@@ -300,12 +300,12 @@ If `terraform.tfstate` and `.env.cloud` already exist:
 
 3. **Run Diagnostic** to verify
    ```bash
-   ./diagnose.sh
+   ./scripts/cloud/diagnose.sh
    ```
 
 4. **Stop Infrastructure**
    ```bash
-   ./cloud-stop.sh
+   ./scripts/cloud/cloud-stop.sh
    # Type: yes
    ```
 
@@ -319,7 +319,7 @@ If `terraform.tfstate` and `.env.cloud` already exist:
 - Add to `.gitignore`
 - Keep secure if sharing folder
 
-### .env.cloud Contains Passwords
+### env/.env.cloud Contains Passwords
 - File contains database passwords
 - **DO NOT commit to git**
 - Add to `.gitignore`
@@ -333,7 +333,7 @@ If `terraform.tfstate` and `.env.cloud` already exist:
 - Needed to destroy infrastructure later
 
 ### Backups Folder
-- Created after `cloud-stop.sh` runs
+- Created after `scripts/cloud/cloud-stop.sh` runs
 - Contains SQL backup files
 - Safe to keep, safe to backup
 - Use for recovery if needed
@@ -344,35 +344,35 @@ If `terraform.tfstate` and `.env.cloud` already exist:
 
 ### "I'm coding on my laptop and need cloud DB"
 ```bash
-./cloud-start.sh      # Create infrastructure
+./scripts/cloud/cloud-start.sh      # Create infrastructure
 # ... code and test ...
-./cloud-stop.sh       # Stop infrastructure and charges
+./scripts/cloud/cloud-stop.sh       # Stop infrastructure and charges
 ```
 
 ### "I need to work on another computer"
 1. Install prerequisites on new computer
 2. `git clone https://github.com/sathishjayapal/consolidated-postgres.git`
-3. Create `terraform.tfvars` with your DO token
-4. Run `./diagnose.sh` to verify
-5. Run `./cloud-start.sh` if needed (or `./cloud-stop.sh` if already running)
+3. Create `scripts/cloud/terraform.tfvars` with your DO token
+4. Run `./scripts/cloud/diagnose.sh` to verify
+5. Run `./scripts/cloud/cloud-start.sh` if needed (or `./scripts/cloud/cloud-stop.sh` if already running)
 
 ### "I forgot if infrastructure is running"
 ```bash
-./diagnose.sh
+./scripts/cloud/diagnose.sh
 # Shows current status
 ```
 
 ### "I need to backup before stopping"
 ```bash
-./cloud-stop.sh
+./scripts/cloud/cloud-stop.sh
 # Automatically backs up before destroying
 # Backup saved in ./backups/ folder
 ```
 
 ### "I need to restore from backup"
 ```bash
-./cloud-start.sh              # Recreate infrastructure
-source .env.cloud
+./scripts/cloud/cloud-start.sh              # Recreate infrastructure
+source env/.env.cloud
 psql -h $DB_HOST -U $DB_USERNAME -d eventstracker_db < backups/backup-*.sql
 ```
 
@@ -390,7 +390,7 @@ psql -h $DB_HOST -U $DB_USERNAME -d eventstracker_db < backups/backup-*.sql
 → Install jq (see Prerequisites section)
 
 **"No terraform state found"**
-→ Infrastructure doesn't exist yet, run `./cloud-start.sh`
+→ Infrastructure doesn't exist yet, run `./scripts/cloud/cloud-start.sh`
 
 **"pg_dump failed"**
 → PostgreSQL client tools not installed, or network issue
@@ -406,7 +406,7 @@ psql -h $DB_HOST -U $DB_USERNAME -d eventstracker_db < backups/backup-*.sql
 **Solution:**
 ```bash
 # Always add --protocol=tcp for remote database connections
-source .env.cloud
+source env/.env.cloud
 
 # For pg_dump (backup)
 PGPASSWORD="$DB_PASSWORD" pg_dump \
@@ -421,12 +421,12 @@ PGPASSWORD="$DB_PASSWORD" pg_dump \
 psql -h $DB_HOST -U $DB_USERNAME -d eventstracker_db --protocol=tcp
 ```
 
-**Note:** The `cloud-stop.sh` script now includes `--protocol=tcp` automatically (fixed as of this session).
+**Note:** The `scripts/cloud/cloud-stop.sh` script now includes `--protocol=tcp` automatically (fixed as of this session).
 
 **Manual diagnostic steps if still failing:**
 ```bash
 # Test with explicit TCP protocol
-source .env.cloud
+source env/.env.cloud
 psql -h $DB_HOST -U $DB_USERNAME -d eventstracker_db --protocol=tcp
 
 # Test DigitalOcean API access
@@ -458,15 +458,15 @@ That file has:
 
 ## Current Files in This Folder
 
-- `cloud-start.sh` - Creates infrastructure
-- `cloud-stop.sh` - Destroys infrastructure + backups
-- `diagnose.sh` - Validates setup
+- `scripts/cloud/cloud-start.sh` - Creates infrastructure
+- `scripts/cloud/cloud-stop.sh` - Destroys infrastructure + backups
+- `scripts/cloud/diagnose.sh` - Validates setup
 - `SETUP_AND_OPERATIONS.md` - Complete documentation
 - `START_HERE.md` - This file (quick start)
-- `terraform.tf` - Infrastructure definition
+- `scripts/cloud/terraform.tf` - Infrastructure definition
 - `terraform.tfvars` - Your DigitalOcean token & config
-- `variables.tf` - Terraform variables
-- `.env.cloud` - Generated (connection details)
+- `scripts/cloud/variables.tf` - Terraform variables
+- `env/.env.cloud` - Generated (connection details)
 - `terraform.tfstate` - Generated (infrastructure state)
 - `backups/` - Generated (data backups)
 
@@ -475,7 +475,7 @@ That file has:
 ## ✅ You're Ready!
 
 1. ✅ Install prerequisites
-2. ✅ Run `./cloud-start.sh` or `./cloud-stop.sh`
+2. ✅ Run `./scripts/cloud/cloud-start.sh` or `./scripts/cloud/cloud-stop.sh`
 3. ✅ Done
 
 The setup works on ANY computer as long as prerequisites are installed.
