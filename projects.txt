@@ -9,3 +9,4 @@ runs-app
 runs-ai-analyzer
 verbose-barnacle
 dbcleaner
+sathish-projects-logger

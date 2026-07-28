@@ -16,7 +16,7 @@ fi
 
 # Read projects from file, ignoring comments and empty lines
 PROJECTS=()
-while IFS= read -r line; do
+while IFS= read -r line || [[ -n "$line" ]]; do
   # Skip comments and empty lines
   [[ "$line" =~ ^[[:space:]]*# ]] && continue
   [[ -z "${line// }" ]] && continue
@@ -73,6 +73,7 @@ get_project_db_user() {
     runs-ai-analyzer)  key="RUNS_AI_ANALYZER_DB_USER"; default_user="" ;;
     verbose-barnacle)  key="GITHUB_CLEANER_DB_USER"; default_user="postgres" ;;  # project compose default
     dbcleaner)         key="JDBC_DATABASE_USERNAME"; default_user="postgres" ;;
+    sathish-projects-logger) key="DATABASE_USERNAME"; default_user="" ;;
     *)                 return 1 ;;
   esac
   # Try project .env first
@@ -145,6 +146,7 @@ get_project_db_name() {
       ;;
     verbose-barnacle) echo "my-github-cleaner" ;;   # verbose-barnacle docker-compose default
     dbcleaner)        echo "dbcleaner" ;;
+    sathish-projects-logger) echo "sathishlogger" ;;
     *)                return 1 ;;
   esac
 }
@@ -156,6 +158,7 @@ get_project_port() {
     runs-ai-analyzer) echo "5444" ;;
     verbose-barnacle) echo "5439" ;;
     dbcleaner)        echo "5433" ;;
+    sathish-projects-logger) echo "8432" ;;
     *)                return 1 ;;
   esac
 }
@@ -167,6 +170,7 @@ get_project_container() {
     runs-ai-analyzer) echo "runs-ai-analyzer-db" ;;
     verbose-barnacle) echo "verbose-barnacle-postgres-1" ;;  # compose default naming
     dbcleaner)        echo "dbcleaner-postgres-1" ;;
+    sathish-projects-logger) echo "sathishlogger-postgres" ;;  # project compose container_name
     *)                return 1 ;;
   esac
 }
@@ -178,6 +182,7 @@ get_project_password_env_var() {
     runs-ai-analyzer) echo "RUNS_AI_ANALYZER_DB_PASSWORD" ;;
     verbose-barnacle) echo "GITHUB_CLEANER_DB_PASSWORD" ;;
     dbcleaner)        echo "DBCLEANER_DB_PASSWORD" ;;
+    sathish-projects-logger) echo "SATHISHLOGGER_DB_PASSWORD" ;;
     *)                return 1 ;;
   esac
 }
@@ -189,6 +194,7 @@ get_project_env_password_key() {
     runs-ai-analyzer) echo "RUNS_AI_ANALYZER_DB_PASSWORD" ;;
     verbose-barnacle) echo "GITHUB_CLEANER_DB_PASSWORD" ;;
     dbcleaner)        echo "JDBC_DATABASE_PASSWORD" ;;
+    sathish-projects-logger) echo "DATABASE_PASSWORD" ;;
     *)                return 1 ;;
   esac
 }
@@ -230,6 +236,7 @@ get_project_db_image() {
     runs-ai-analyzer) echo "pgvector/pgvector:pg17" ;;
     verbose-barnacle) echo "postgres:17.5" ;;
     dbcleaner)        echo "postgres:18.3" ;;
+    sathish-projects-logger) echo "postgres:15-alpine" ;;  # matches project's own local compose
     *)                return 1 ;;
   esac
 }
@@ -238,21 +245,20 @@ get_project_db_image() {
 get_project_pg_mount() {
   case "$1" in
     runs-app|dbcleaner) echo "/var/lib/postgresql" ;;        # postgres 18+
-    eventstracker|runs-ai-analyzer|verbose-barnacle) echo "/var/lib/postgresql/data" ;;
+    eventstracker|runs-ai-analyzer|verbose-barnacle|sathish-projects-logger) echo "/var/lib/postgresql/data" ;;
     *)                return 1 ;;
   esac
 }
 
 # Compose service name inside the VM stack.
-# NOTE: eventstracker must stay "postgres" — the eventstracker app container in
-# the sathish-stack reaches its DB at hostname "postgres".
 get_project_db_service() {
   case "$1" in
-    eventstracker)    echo "postgres" ;;
+    eventstracker)    echo "eventstracker-db" ;;
     runs-app)         echo "runs-app-db" ;;
     runs-ai-analyzer) echo "runs-ai-analyzer-db" ;;
     verbose-barnacle) echo "github-cleaner-db" ;;
     dbcleaner)        echo "dbcleaner-db" ;;
+    sathish-projects-logger) echo "sathishlogger-db" ;;
     *)                return 1 ;;
   esac
 }
@@ -265,6 +271,7 @@ get_project_vm_volume() {
     runs-ai-analyzer) echo "pg_data_runs_ai_analyzer" ;;
     verbose-barnacle) echo "pg_data_github_cleaner" ;;
     dbcleaner)        echo "pg_data_dbcleaner" ;;
+    sathish-projects-logger) echo "pg_data_sathishlogger" ;;
     *)                return 1 ;;
   esac
 }
@@ -278,6 +285,7 @@ get_project_db_name_key() {
     runs-ai-analyzer) echo "RUNS_AI_ANALYZER_DB_NAME" ;;
     verbose-barnacle) echo "GITHUB_CLEANER_DB_NAME" ;;
     dbcleaner)        echo "DBCLEANER_DB_NAME" ;;
+    sathish-projects-logger) echo "SATHISHLOGGER_DB_NAME" ;;
     *)                return 1 ;;
   esac
 }
@@ -289,6 +297,7 @@ get_project_db_user_key() {
     runs-ai-analyzer) echo "RUNS_AI_ANALYZER_DB_USER" ;;
     verbose-barnacle) echo "GITHUB_CLEANER_DB_USER" ;;
     dbcleaner)        echo "DBCLEANER_DB_USER" ;;
+    sathish-projects-logger) echo "SATHISHLOGGER_DB_USER" ;;
     *)                return 1 ;;
   esac
 }
@@ -301,6 +310,7 @@ get_project_db_url_key() {
     runs-ai-analyzer) echo "RUNS_AI_ANALYZER_DB_URL" ;;
     verbose-barnacle) echo "GITHUB_CLEANER_DB_URL" ;;
     dbcleaner)        echo "JDBC_DATABASE_URL" ;;
+    sathish-projects-logger) echo "DATABASE_URL" ;;
     *)                return 1 ;;
   esac
 }

@@ -59,6 +59,7 @@ config_ymls_for() {
     eventstracker)    echo "eventstracker/eventstracker-local.yml eventstracker/eventstracker-prod.yml" ;;
     dbcleaner)        echo "dbcleaner/dbcleaner-docker.yml" ;;
     verbose-barnacle) echo "my-github-cleaner/my-github-cleaner-local.yml" ;;
+    sathish-projects-logger) echo "sathishlogger/sathishlogger-prod.yml" ;;
     *)                echo "" ;;
   esac
 }
@@ -71,12 +72,13 @@ compose_service_for() {
     eventstracker)    echo "eventstracker" ;;
     dbcleaner)        echo "dbcleaner" ;;
     verbose-barnacle) echo "" ;;
+    sathish-projects-logger) echo "sathishlogger" ;;
     *)                echo "" ;;
   esac
 }
 
 # Projects this checker knows about (only ones with a CONFIG_YMLS entry).
-CHECKED_PROJECTS="eventstracker dbcleaner verbose-barnacle"
+CHECKED_PROJECTS="eventstracker dbcleaner verbose-barnacle sathish-projects-logger"
 
 extract_placeholders() {
   # Only bare ${VAR} (no colon) — these are hard requirements in Spring YAML

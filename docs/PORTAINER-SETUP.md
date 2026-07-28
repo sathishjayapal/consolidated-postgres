@@ -129,17 +129,20 @@ docker buildx build --platform linux/amd64 \
 
 Startup order (enforced by `depends_on` + healthchecks):
 
-1. `postgres` + `rabbitmq` start immediately
+1. Each project's DB service (e.g. `eventstracker-db`, `dbcleaner-db`, `sathishlogger-db`) + `rabbitmq` start immediately
 2. `config-server` starts and waits to become healthy (~40 s)
-3. `eventstracker` starts only after config-server is healthy
+3. `eventstracker` and `sathishlogger` start only after config-server is healthy
 4. `dbcleaner` starts after `dbcleaner-db` is healthy; it also opens read pools to `runs-app-db`, `runs-ai-analyzer-db`
-   and `postgres` (eventstracker), so enable those DB blocks in the PROJECT-DBS section (pass `runs-app`,
+   and `eventstracker-db`, so enable those DB blocks in the PROJECT-DBS section (pass `runs-app`,
    `runs-ai-analyzer`, `eventstracker` to `vm-db-up.sh`). Until they're up it restarts automatically.
 
 > **dbcleaner DB env vars** — `DBCLEANER_DB_NAME` / `_USER` / `_PASSWORD` (plus
 > `RUNS_APP_DB_*`, `RUNS_AI_ANALYZER_DB_*`, `EVENTS_TRACKER_DB_*`) are pushed
 > into the Portainer stack env automatically by `vm-db-up.sh` from each
 > project's local `.env`; you don't add them by hand.
+>
+> **sathish-projects-logger DB env vars** — `SATHISHLOGGER_DB_NAME` / `_USER` / `_PASSWORD`,
+> pushed the same way once `sathish-projects-logger` is passed to `vm-db-up.sh`.
 
 ---
 
@@ -154,7 +157,7 @@ After the bootstrap, every `git push` to `main` on any of the three repos:
 
 Watch it in Portainer → **Containers → watchtower → Logs**.
 
-**Note for eventstracker CI:** The workflow clones `sathishlogger` and runs `mvn install` before building
+**Note for eventstracker CI:** The workflow clones `sathish-projects-logger` and runs `mvn install` before building
 `eventstracker`, because `sathish-projects-logger` is a local SNAPSHOT not published to Maven Central.
 
 ---
@@ -183,11 +186,11 @@ Watch it in Portainer → **Containers → watchtower → Logs**.
 → Fixed in Dockerfile with `RUN chmod +x mvnw`. If you see this, pull the latest Dockerfile.
 
 **`target/app.jar not found` when building eventstracker**
-→ Run `mvn install -DskipTests -B` in `sathishlogger` first, then in `eventstracker`:
+→ Run `mvn install -DskipTests -B` in `sathish-projects-logger` first, then in `eventstracker`:
 `./mvnw package -DskipTests -B && mv target/*.jar target/app.jar`.
 
 **`cannot resolve com.sathish:sathish-projects-logger` during eventstracker build**
-→ `sathishlogger` hasn't been installed to the local Maven repo. Run `cd sathishlogger && mvn install -DskipTests -B`
+→ `sathish-projects-logger` hasn't been installed to the local Maven repo. Run `cd sathish-projects-logger && mvn install -DskipTests -B`
 first.
 
 **eventstracker keeps restarting in Portainer**

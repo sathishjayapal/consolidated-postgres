@@ -33,6 +33,7 @@ version: "3.9"
 #     RUNS_AI_ANALYZER_DB_NAME / _USER / _PASSWORD    (when enabled)
 #     GITHUB_CLEANER_DB_NAME / _USER / _PASSWORD      (when enabled)
 #     DBCLEANER_DB_NAME / _USER / _PASSWORD           (when enabled)
+#     SATHISHLOGGER_DB_NAME / _USER / _PASSWORD       (when enabled)
 # ─────────────────────────────────────────────────────────────────────────────
 
 services:
@@ -129,6 +130,24 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+  sathishlogger-db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${SATHISHLOGGER_DB_NAME:-sathishlogger}
+      POSTGRES_USER: ${SATHISHLOGGER_DB_USER:?set in Portainer stack env}
+      POSTGRES_PASSWORD: ${SATHISHLOGGER_DB_PASSWORD:?set in Portainer stack env}
+    ports:
+      - "8432:5432"
+    volumes:
+      - pg_data_sathishlogger:/var/lib/postgresql/data
+    networks:
+      - sathish-net
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${SATHISHLOGGER_DB_USER} -d ${SATHISHLOGGER_DB_NAME:-sathishlogger}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
   # >>> PROJECT-DBS:END
 
   # ── Static infrastructure ───────────────────────────────────────────────────
@@ -190,15 +209,24 @@ services:
       - "8090:8080"     # host 8090 → container 8080 (avoids conflict with other services)
     environment:
       SERVER_PORT: 8080
-      DATABASE_URL: jdbc:h2:file:/app/data/sathishlogger
-      DATABASE_USERNAME: sa
-      DATABASE_PASSWORD: ""
+      SPRING_PROFILES_ACTIVE: prod
+      CONFIG_SERVER_URL: http://config-server:8888
+      SPRING_CLOUD_CONFIG_USERNAME: ${CONFIG_SERVER_USERNAME}
+      SPRING_CLOUD_CONFIG_PASSWORD: ${CONFIG_SERVER_PASSWORD}
+      DATABASE_URL: jdbc:postgresql://sathishlogger-db:5432/${SATHISHLOGGER_DB_NAME:-sathishlogger}
+      DATABASE_USERNAME: ${SATHISHLOGGER_DB_USER}
+      DATABASE_PASSWORD: ${SATHISHLOGGER_DB_PASSWORD}
       JPA_DDL_AUTO: update
       LOG_LEVEL: INFO
       STORAGE_TYPE: database
       LOG_RETENTION_DAYS: 30
     volumes:
       - logger_data:/app/data
+    depends_on:
+      config-server:
+        condition: service_healthy
+      sathishlogger-db:
+        condition: service_healthy
     networks:
       - sathish-net
 
@@ -322,6 +350,7 @@ volumes:
   pg_data_runs_ai_analyzer:
   pg_data_github_cleaner:
   pg_data_dbcleaner:
+  pg_data_sathishlogger:
   # >>> PROJECT-DB-VOLUMES:END
   rabbitmq_data:
   logger_data:
