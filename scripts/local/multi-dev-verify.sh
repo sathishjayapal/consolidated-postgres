@@ -30,7 +30,7 @@ RABBIT_CONTAINER="$(get_rabbitmq_container)"
 INFRA_DIR="$(get_infra_config_dir)"
 
 CLOUD_MODE=false
-if [[ $# -gt 0 && ( "$1" == "--acg" || "$1" == "--prod" ) ]]; then
+if [[ $# -gt 0 && "$1" == "--cloud" ]]; then
   CLOUD_MODE=true
   shift
 fi
@@ -79,7 +79,7 @@ fi
 
 if [ "$CLOUD_MODE" = true ]; then
   print_header "Container health"
-  print_warn "Skipping local container checks (--acg/--prod mode)"
+  print_warn "Skipping local container checks in cloud mode"
 else
   print_header "Container health"
 
@@ -237,7 +237,7 @@ fi
 
 if [ "$CLOUD_MODE" = true ]; then
   print_header "RabbitMQ auth"
-  print_warn "Skipping RabbitMQ auth check (--acg/--prod mode)"
+  print_warn "Skipping RabbitMQ auth check in cloud mode"
 else
   print_header "RabbitMQ auth"
   rabbit_user=$(grep -E '^RABBITMQ_USERNAME=' "$INFRA_DIR/.env" | tail -n 1 | cut -d'=' -f2- || true)

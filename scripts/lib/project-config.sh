@@ -67,10 +67,14 @@ get_project_db_user() {
   project_dir=$(resolve_project_dir "$project")
   local env_file="$project_dir/.env"
   local key default_user
-  key=$(get_project_db_user_env_key "$project") || return 1
   case "$project" in
-    verbose-barnacle|dbcleaner) default_user="postgres" ;;  # project compose default
-    *)                          default_user="" ;;
+    eventstracker)     key="EVENTS_TRACKER_DB_USER"; default_user="" ;;
+    runs-app)          key="JDBC_DATABASE_USERNAME"; default_user="" ;;
+    runs-ai-analyzer)  key="RUNS_AI_ANALYZER_DB_USER"; default_user="" ;;
+    verbose-barnacle)  key="GITHUB_CLEANER_DB_USER"; default_user="postgres" ;;  # project compose default
+    dbcleaner)         key="JDBC_DATABASE_USERNAME"; default_user="postgres" ;;
+    sathish-projects-logger) key="DATABASE_USERNAME"; default_user="" ;;
+    *)                 return 1 ;;
   esac
   # Try project .env first
   if [ -f "$env_file" ]; then
@@ -191,25 +195,6 @@ get_project_env_password_key() {
     verbose-barnacle) echo "GITHUB_CLEANER_DB_PASSWORD" ;;
     dbcleaner)        echo "JDBC_DATABASE_PASSWORD" ;;
     sathish-projects-logger) echo "DATABASE_PASSWORD" ;;
-    *)                return 1 ;;
-  esac
-}
-
-# The DB username key as it actually appears in the project's OWN .env file
-# (app-runtime convention — what that project's Spring config reads). This is
-# a different domain from get_project_db_user_key()/get_project_password_env_var(),
-# which are the key names pushed into the VM Portainer stack env; the two only
-# happen to match for some projects. Any writer that populates a PROJECT's own
-# .env (dev-up.sh --acg/--prod, local mode) must use this + get_project_db_url_key()
-# + get_project_env_password_key() — the three domain-A keys — not the VM ones.
-get_project_db_user_env_key() {
-  case "$1" in
-    eventstracker)    echo "EVENTS_TRACKER_DB_USER" ;;
-    runs-app)         echo "JDBC_DATABASE_USERNAME" ;;
-    runs-ai-analyzer) echo "RUNS_AI_ANALYZER_DB_USER" ;;
-    verbose-barnacle) echo "GITHUB_CLEANER_DB_USER" ;;
-    dbcleaner)        echo "JDBC_DATABASE_USERNAME" ;;
-    sathish-projects-logger) echo "DATABASE_USERNAME" ;;
     *)                return 1 ;;
   esac
 }

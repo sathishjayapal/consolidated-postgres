@@ -2,37 +2,26 @@
 set -euo pipefail
 
 #################################################################
-# Prod Database Backup / Teardown (DigitalOcean, persistent)
+# On-Demand Cloud Database Shutdown
 #
-# Usage: ./scripts/prod/prod-stop.sh [--destroy]
+# Usage: ./scripts/cloud/cloud-stop.sh
 #
 # What it does:
-#   1. Exports all data from PostgreSQL to local backup (always)
+#   1. Exports all data from PostgreSQL to local backup
 #   2. Creates timestamped backup file (e.g., backup-2026-03-22-1130.sql)
-#   3. Only with --destroy: destroys DigitalOcean infrastructure (stops all
-#      charges). Without --destroy, this is backup-only — the infrastructure
-#      keeps running. "prod" is persistent by design; --destroy is the
-#      explicit opt-in for actually tearing it down.
+#   3. Destroys DigitalOcean infrastructure (stops all charges)
 #   4. Keeps local backup for recovery
 #
-# Cost Impact: --destroy stops ~$0.67/day charges immediately
-# Data Safety: All data exported before any deletion
+# Cost Impact: Stops ~$0.67/day charges immediately
+# Data Safety: All data exported before deletion
 #
-# Recovery: ./scripts/prod/prod-start.sh && psql < backup-2026-03-22-1130.sql
+# Recovery: ./scripts/cloud/cloud-start.sh && psql < backup-2026-03-22-1130.sql
 #################################################################
-
-DESTROY=false
-for arg in "$@"; do
-  case "$arg" in
-    --destroy) DESTROY=true ;;
-    *) echo "Unknown option: $arg" >&2; exit 1 ;;
-  esac
-done
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-ENV_PROD="$REPO_ROOT/env/.env.prod"
-PROD_STATUS_FILE="$REPO_ROOT/.PROD_STATUS"
+ENV_CLOUD="$REPO_ROOT/env/.env.cloud"
+CLOUD_STATUS_FILE="$REPO_ROOT/.CLOUD_STATUS"
 cd "$SCRIPT_DIR"
 
 # Colors for output
@@ -65,33 +54,28 @@ print_section() {
   echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
 }
 
-if $DESTROY; then
-  print_section "🚨 Prod Database Backup + Destroy"
-  print_warning "This will DESTROY prod infrastructure and stop all charges"
-  print_warning "Data will be EXPORTED first (safe to delete)"
-  echo ""
-  echo "This action:"
-  echo "  • Exports all data from PostgreSQL to local backup"
-  echo "  • Deletes the PostgreSQL instance (stops \$0.67/day charges)"
-  echo "  • Keeps exported data files for recovery"
-  echo ""
+# Safety check
+print_section "🚨 Cloud Database Shutdown"
 
-  read -p "Are you sure? Type 'yes' to continue: " -r CONFIRM
-  if [[ ! $CONFIRM == "yes" ]]; then
-    print_error "Cancelled - infrastructure still running"
-    exit 0
-  fi
-else
-  print_section "Prod Database Backup (no --destroy — infrastructure stays up)"
-  print_info "Exporting a backup only. Infrastructure will keep running and costing money."
-  print_info "Pass --destroy if you actually want to tear it down."
-  echo ""
+print_warning "This will DESTROY cloud infrastructure and stop all charges"
+print_warning "Data will be EXPORTED first (safe to delete)"
+echo ""
+echo "This action:"
+echo "  • Exports all data from PostgreSQL to local backup"
+echo "  • Deletes the PostgreSQL instance (stops \$0.67/day charges)"
+echo "  • Keeps exported data files for recovery"
+echo ""
+
+read -p "Are you sure? Type 'yes' to continue: " -r CONFIRM
+if [[ ! $CONFIRM == "yes" ]]; then
+  print_error "Cancelled - infrastructure still running"
+  exit 0
 fi
 
-# Check if prod is actually running
+# Check if cloud is actually running
 if [ ! -f "terraform.tfstate" ]; then
-  print_warning "Prod infrastructure doesn't appear to be running"
-  print_info "No terraform state found - nothing to back up or destroy"
+  print_warning "Cloud infrastructure doesn't appear to be running"
+  print_info "No terraform state found - nothing to destroy"
   exit 0
 fi
 
@@ -184,7 +168,7 @@ Backup File: $BACKUP_FILE
 Size: $(ls -lh $BACKUP_FILE 2>/dev/null | awk '{print $5}' || echo "unknown")
 
 To restore:
-  ./scripts/prod/prod-start.sh  # Recreate infrastructure
+  ./scripts/cloud/cloud-start.sh  # Recreate infrastructure
   psql -h \$HOST -U \$USER -d \$DATABASE < $BACKUP_FILE
 
 Files in this backup:
@@ -203,23 +187,11 @@ print_section "Step 3: Backup Summary"
 print_status "Local backup created: $BACKUP_FILE"
 print_info "This backup is stored locally for recovery"
 print_info "If needed, restore with:"
-echo "  ./scripts/prod/prod-start.sh"
+echo "  ./scripts/cloud/cloud-start.sh"
 echo "  psql -h \$HOST -U \$USER -d \$DATABASE < $BACKUP_FILE"
 
-if ! $DESTROY; then
-  print_section "✅ Backup Complete — Infrastructure Still Running"
-  echo "Summary:"
-  echo "  • Prod database backed up, NOT destroyed (no --destroy passed)"
-  echo "  • Data backed up to: $BACKUP_FILE"
-  echo "  • Manifest created: $BACKUP_DIR/manifest-$TIMESTAMP.txt"
-  echo ""
-  echo "To actually tear down and stop charges:"
-  echo "  ./scripts/prod/prod-stop.sh --destroy"
-  exit 0
-fi
-
 # Destroy infrastructure
-print_section "Step 4: Destroying Prod Infrastructure (Takes 1-2 minutes)"
+print_section "Step 4: Destroying Cloud Infrastructure (Takes 1-2 minutes)"
 
 print_warning "Destroying DigitalOcean resources..."
 print_info "(This takes 1-2 minutes)"
@@ -227,7 +199,7 @@ echo ""
 
 terraform destroy -var-file="terraform.tfvars" -auto-approve
 
-print_status "Prod infrastructure destroyed"
+print_status "Cloud infrastructure destroyed"
 print_status "All charges stopped immediately"
 
 # Verify destruction
@@ -235,29 +207,29 @@ if [ -f "terraform.tfstate" ]; then
   # Check if resources still exist
   RESOURCE_COUNT=$(grep -c "digitalocean_database" terraform.tfstate || echo "0")
   if [ "$RESOURCE_COUNT" -eq "0" ]; then
-    print_status "All prod resources removed"
+    print_status "All cloud resources removed"
   fi
 fi
 
 # Cleanup
 print_section "Step 5: Cleanup"
 
-rm -f "$PROD_STATUS_FILE"
-rm -f "$ENV_PROD"
+rm -f "$CLOUD_STATUS_FILE"
+rm -f "$ENV_CLOUD"
 
-print_status "Removed env/.env.prod and status files"
+print_status "Removed env/.env.cloud and status files"
 
 # Summary
-print_section "✅ Prod Infrastructure Shutdown Complete"
+print_section "✅ Cloud Infrastructure Shutdown Complete"
 
 echo "Summary:"
-echo "  • Prod database destroyed"
+echo "  • Cloud database destroyed"
 echo "  • All charges stopped"
 echo "  • Data backed up to: $BACKUP_FILE"
 echo "  • Manifest created: $BACKUP_DIR/manifest-$TIMESTAMP.txt"
 echo ""
 echo "To restore later:"
-echo "  1. ./prod-start.sh (recreates infrastructure)"
+echo "  1. ./cloud-start.sh (recreates infrastructure)"
 echo "  2. psql -h \$HOST -U \$USER -d \$DATABASE < $BACKUP_FILE"
 echo ""
 echo "💰 Cost Savings:"

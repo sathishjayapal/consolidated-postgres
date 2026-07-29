@@ -3,14 +3,10 @@
 .env.vm
 .env.local
 .env.cloud
-.env.acg
-.env.prod
 
 # Centralized environment directory: ignore real secrets, keep examples tracked
 env/.env.vm
 env/.env.cloud
-env/.env.acg
-env/.env.prod
 env/.env.local
 env/vm.env
 env/acg.tfvars
@@ -27,7 +23,6 @@ acg.tfvars
 .ACG_STATUS
 .ACG_AWS_STATUS
 .CLOUD_STATUS
-.PROD_STATUS
 
 # Python
 venv/
