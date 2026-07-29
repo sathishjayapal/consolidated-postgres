@@ -9,7 +9,7 @@ set -euo pipefail
 # What it does:
 #   1. Dumps all 3 databases to timestamped backup files
 #   2. Runs terraform destroy (targeting PostgreSQL module only)
-#   3. Cleans up env/.env.cloud and status marker
+#   3. Cleans up env/.env.acg and status marker
 #
 # Run this BEFORE your ACG sandbox session expires to save data.
 # Backups are written to ./backups/acg-YYYY-MM-DD-HHMM/
@@ -23,7 +23,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 IAC_DIR="$(cd "$REPO_ROOT/../iAC-NikeRuns" && pwd)"
 TFVARS_FILE="$REPO_ROOT/env/acg.tfvars"
-ENV_CLOUD="$REPO_ROOT/env/.env.cloud"
+ENV_ACG="$REPO_ROOT/env/.env.acg"
 ACG_STATUS_FILE="$REPO_ROOT/.ACG_STATUS"
 
 # ── Colors ────────────────────────────────────────────────────────────────────
@@ -80,7 +80,7 @@ if [ -z "$PG_HOST" ] || [ -z "$PG_USER" ] || [ -z "$PG_PASS" ]; then
     -target=module.flexipostgresmodule \
     -input=false \
     -auto-approve || true
-  rm -f "$ENV_CLOUD" "$ACG_STATUS_FILE"
+  rm -f "$ENV_ACG" "$ACG_STATUS_FILE"
   exit 0
 fi
 
@@ -132,7 +132,7 @@ cat > "$BACKUP_DIR/RESTORE.md" << EOF
 
 ## To restore
 1. \`./scripts/acg/acg-start.sh\`  — recreate infrastructure
-2. Load host/password from env/.env.cloud
+2. Load host/password from env/.env.acg
 3. Restore each database:
 \`\`\`bash
 PGPASSWORD=\$PG_PASS psql -h \$PG_HOST -p \$PG_PORT -U \$PG_USER -d event-service < eventstracker.sql
@@ -161,8 +161,8 @@ print_status "PostgreSQL Flexible Server destroyed — charges stopped."
 # ── Cleanup ───────────────────────────────────────────────────────────────────
 print_section "Cleanup (Step 3/3)"
 
-rm -f "$ENV_CLOUD" "$ACG_STATUS_FILE"
-print_status "env/.env.cloud and status files removed"
+rm -f "$ENV_ACG" "$ACG_STATUS_FILE"
+print_status "env/.env.acg and status files removed"
 
 # Restore project .env files to localhost defaults so local dev still works
 restore_local_env() {

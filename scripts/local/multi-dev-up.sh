@@ -7,6 +7,8 @@ set -euo pipefail
 # Usage: ./multi-dev-up.sh [options]
 #
 #   --reset     Drop and recreate all databases (clean slate)
+#   --acg       Point apps at a running ACG sandbox instead of local containers
+#   --prod      Point apps at the persistent prod DB instead of local containers
 #   --help      Show this help message
 #
 # What it does:
@@ -45,7 +47,8 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-CLOUD_MODE=false
+ACG_MODE=false
+PROD_MODE=false
 RESET_DB=false
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -53,8 +56,12 @@ while [[ $# -gt 0 ]]; do
       RESET_DB=true
       shift
       ;;
-    --cloud)
-      CLOUD_MODE=true
+    --acg)
+      ACG_MODE=true
+      shift
+      ;;
+    --prod)
+      PROD_MODE=true
       shift
       ;;
     --help)
@@ -67,6 +74,14 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+if $ACG_MODE && $PROD_MODE; then
+  echo "--acg and --prod are mutually exclusive"
+  exit 1
+fi
+PROFILE_FLAG=""
+$ACG_MODE && PROFILE_FLAG="--acg"
+$PROD_MODE && PROFILE_FLAG="--prod"
 
 print_status() {
   echo -e "${GREEN}✓${NC} $1"
@@ -265,11 +280,11 @@ start_config_server() {
   exit 1
 }
 
-if [ "$CLOUD_MODE" = false ]; then
+if [ -z "$PROFILE_FLAG" ]; then
   start_config_server
   start_rabbitmq
 else
-  print_info "Cloud mode detected -- skipping local config-server and RabbitMQ startup"
+  print_info "$PROFILE_FLAG mode detected -- skipping local config-server and RabbitMQ startup"
 fi
 
 for project in "${PROJECTS[@]}"; do
@@ -286,17 +301,17 @@ for project in "${PROJECTS[@]}"; do
   project_upper=$(echo "$project" | tr '[:lower:]' '[:upper:]')
   print_header "$project_upper"
 
-  if [ "$RESET_DB" = true ] && [ "$CLOUD_MODE" = false ]; then
+  if [ "$RESET_DB" = true ] && [ -z "$PROFILE_FLAG" ]; then
     print_info "Resetting $project (--reset flag)..."
     (cd "$project_dir" && ./dev-up.sh --reset)
   elif [ "$RESET_DB" = true ]; then
-    print_info "--reset ignored for $project in cloud mode"
+    print_info "--reset ignored for $project in $PROFILE_FLAG mode"
   fi
 
   print_info "Starting $project..."
-  if [ "$CLOUD_MODE" = true ]; then
-    (cd "$project_dir" && ./dev-up.sh --cloud)
-    print_warn "$project cloud mode: skipping local DB verification"
+  if [ -n "$PROFILE_FLAG" ]; then
+    (cd "$project_dir" && ./dev-up.sh "$PROFILE_FLAG")
+    print_warn "$project $PROFILE_FLAG mode: skipping local DB verification"
     continue
   else
     (cd "$project_dir" && ./dev-up.sh)
@@ -345,7 +360,7 @@ done
 
 print_header "Seed Data Verification"
 
-if [ "$CLOUD_MODE" = false ]; then
+if [ -z "$PROFILE_FLAG" ]; then
   # EventTracker seed check
   if password=$(get_project_password "eventstracker"); then
     _et_port=$(get_project_port "eventstracker")

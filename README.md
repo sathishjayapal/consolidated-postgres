@@ -12,7 +12,7 @@ it starts, stops, verifies, and tears down the PostgreSQL databases and RabbitMQ
 | `scripts/local/`                                                                       | Local dev orchestration — `multi-dev-up.sh`, `multi-dev-down.sh`, `multi-dev-verify.sh`, `start-all-services.sh`, `stop-all-services.sh` |
 | `scripts/lib/project-config.sh`                                                        | Shared project metadata (ports, DB names, containers, env keys)                                                                          |
 | `projects.txt`                                                                         | Source of truth for which projects are managed by the orchestration scripts                                                              |
-| `scripts/cloud/cloud-start.sh` / `scripts/cloud/cloud-stop.sh`                                                     | DigitalOcean managed Postgres, on-demand                                                                                                 |
+| `scripts/prod/prod-start.sh` / `scripts/prod/prod-stop.sh`                                                     | DigitalOcean managed Postgres, on-demand                                                                                                 |
 | `scripts/acg/acg-start.sh` / `scripts/acg/acg-stop.sh`                                                         | Azure ACG sandbox — Postgres Flexible Server                                                                                             |
 | `scripts/acg/acg-aws-start.sh` / `scripts/acg/acg-aws-stop.sh`                                                 | AWS ACG sandbox — Docker `pgvector` on EC2 via SSM tunnel                                                                                |
 | `scripts/local/rabbitmq-manager.sh`, `compose/rabbitmq-compose.yml` | RabbitMQ lifecycle                                                                                                                       |
@@ -43,7 +43,7 @@ package "Local Orchestration" {
 }
 
 package "Cloud Orchestration" {
-  [DigitalOcean (scripts/cloud/cloud-start.sh / scripts/cloud/cloud-stop.sh)] as DigitalOcean
+  [DigitalOcean (scripts/prod/prod-start.sh / scripts/prod/prod-stop.sh)] as DigitalOcean
   [Azure ACG (scripts/acg/acg-start.sh / scripts/acg/acg-stop.sh)] as Azure_ACG
   [AWS ACG (scripts/acg/acg-aws-start.sh / scripts/acg/acg-aws-stop.sh)] as AWS_ACG
 }
@@ -131,7 +131,7 @@ See [docs/VM_WORKFLOW.md](docs/VM_WORKFLOW.md) and the new [docs/ENVIRONMENTS.md
 
 | Scripts                                | Provider          | Notes                                                                                                                                      |
 |----------------------------------------|-------------------|--------------------------------------------------------------------------------------------------------------------------------------------|
-| `scripts/cloud/cloud-start.sh` / `scripts/cloud/cloud-stop.sh`     | DigitalOcean      | Managed Postgres cluster, ~$0.50/day while running                                                                                         |
+| `scripts/prod/prod-start.sh` / `scripts/prod/prod-stop.sh`     | DigitalOcean      | Managed Postgres cluster, ~$0.50/day while running                                                                                         |
 | `scripts/acg/acg-start.sh` / `scripts/acg/acg-stop.sh`         | Azure ACG sandbox | Postgres Flexible Server via targeted `terraform apply` against `../iAC-NikeRuns`                                                          |
 | `scripts/acg/acg-aws-start.sh` / `scripts/acg/acg-aws-stop.sh` | AWS ACG sandbox   | `pgvector/pgvector:pg16` in Docker on an EC2 t3.micro, reached via SSM port-forwarding tunnel (managed RDS is blocked by SCP `p-cr6s9vs4`) |
 
@@ -173,8 +173,8 @@ _Generated from `projects.txt` and the scripts present in the repo as of `36cf29
 | `scripts/local/multi-dev-verify.sh` | yes | Guardrail verification script to ensure our multi-service local environment |
 | `scripts/local/start-all-services.sh` | yes | Automated Service Startup with Correct Ordering |
 | `scripts/local/stop-all-services.sh` | yes | Stop All Spring Boot Services |
-| `scripts/cloud/cloud-start.sh` | yes | On-Demand Cloud Database Startup |
-| `scripts/cloud/cloud-stop.sh` | yes | On-Demand Cloud Database Shutdown |
+| `scripts/prod/prod-start.sh` | yes | On-Demand Cloud Database Startup |
+| `scripts/prod/prod-stop.sh` | yes | On-Demand Cloud Database Shutdown |
 | `scripts/acg/acg-start.sh` | yes | ACG Azure Sandbox — Shared PostgreSQL Startup |
 | `scripts/acg/acg-stop.sh` | yes | ACG Azure Sandbox — PostgreSQL Teardown |
 | `scripts/acg/acg-aws-start.sh` | yes | ACG AWS Sandbox — PostgreSQL via SSM (Docker on EC2) |

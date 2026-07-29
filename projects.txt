@@ -3,6 +3,12 @@
 # Add new projects here - they will be automatically included in all orchestration scripts.
 # Projects without a dev-up.sh (verbose-barnacle, dbcleaner) are skipped by the
 # local multi-dev scripts but fully supported by scripts/vm/vm-db-up.sh and ACG.
+#
+# Four profiles exist for every project here: local (each project's own
+# dev-up.sh), vm (scripts/vm/vm-db-up.sh), acg (scripts/acg/*-start.sh,
+# env/.env.acg), and prod (scripts/prod/prod-start.sh, env/.env.prod).
+# See docs/ENVIRONMENTS.md for the full map. Per-project env var key names
+# for all four are defined once in scripts/lib/project-config.sh.
 
 eventstracker
 runs-app

@@ -7,12 +7,12 @@ set -euo pipefail
 # Usage: ./scripts/acg/acg-aws-stop.sh
 #
 # What it does:
-#   1. Reads connection info from env/.env.cloud or Terraform state
+#   1. Reads connection info from env/.env.acg or Terraform state
 #   2. pg_dumps all 3 databases to ./backups/acg-aws-TIMESTAMP/
 #   3. Kills the SSM port-forwarding tunnel
 #   4. terraform destroy
 #   5. Resets project .env files to local Docker defaults
-#   6. Cleans up env/.env.cloud, .tunnel.pid, status marker
+#   6. Cleans up env/.env.acg, .tunnel.pid, status marker
 #
 # Run this BEFORE your ACG lab session expires to preserve data.
 #################################################################
@@ -21,7 +21,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 SHARED_DB_DIR="$(cd "$REPO_ROOT/../iAC-NikeRuns/aws-modules/shared-db" && pwd)"
 TFVARS_FILE="$SHARED_DB_DIR/terraform.tfvars"
-ENV_CLOUD="$REPO_ROOT/env/.env.cloud"
+ENV_ACG="$REPO_ROOT/env/.env.acg"
 TUNNEL_PID_FILE="$REPO_ROOT/.tunnel.pid"
 ACG_AWS_STATUS_FILE="$REPO_ROOT/.ACG_AWS_STATUS"
 LOCAL_PORT=5432
@@ -80,13 +80,13 @@ SKIP_BACKUP=false
 TUNNEL_PID=""
 KILL_TUNNEL=false
 
-if [ -f "$ENV_CLOUD" ]; then
+if [ -f "$ENV_ACG" ]; then
   # shellcheck disable=SC1090
-  source <(grep -E '^(DB_USERNAME|DB_PASSWORD|SECRET_ARN|SSM_RELAY_INSTANCE_ID|SSM_TUNNEL_PORT)=' "$ENV_CLOUD") || true
+  source <(grep -E '^(DB_USERNAME|DB_PASSWORD|SECRET_ARN|SSM_RELAY_INSTANCE_ID|SSM_TUNNEL_PORT)=' "$ENV_ACG") || true
   LOCAL_PORT="${SSM_TUNNEL_PORT:-5432}"
-  print_status "Loaded from env/.env.cloud"
+  print_status "Loaded from env/.env.acg"
 else
-  print_info "env/.env.cloud not found — reading from Terraform state..."
+  print_info "env/.env.acg not found — reading from Terraform state..."
   cd "$SHARED_DB_DIR"
   DB_USERNAME=$(terraform output -raw master_username 2>/dev/null || echo "")
   SECRET_ARN=$(terraform output -raw secret_arn 2>/dev/null || echo "")
@@ -102,7 +102,7 @@ else
     print_warning "Cannot determine connection info — may already be destroyed."
     print_info "Attempting terraform destroy anyway..."
     terraform destroy -var-file="$TFVARS_FILE" -input=false -auto-approve || true
-    rm -f "$ENV_CLOUD" "$ACG_AWS_STATUS_FILE" "$TUNNEL_PID_FILE"
+    rm -f "$ENV_ACG" "$ACG_AWS_STATUS_FILE" "$TUNNEL_PID_FILE"
     exit 0
   fi
 
@@ -269,8 +269,8 @@ reset_env_key "runs-app" \
 reset_env_key "runs-ai-analyzer" \
   "RUNS_AI_ANALYZER_DB_URL=jdbc:postgresql://localhost:5444/runs_ai_analyzer_db"
 
-rm -f "$ENV_CLOUD" "$SCRIPT_DIR/.ACG_AWS_STATUS" "$TUNNEL_PID_FILE"
-print_status "Cleanup complete (env/.env.cloud, status marker, tunnel PID removed)"
+rm -f "$ENV_ACG" "$SCRIPT_DIR/.ACG_AWS_STATUS" "$TUNNEL_PID_FILE"
+print_status "Cleanup complete (env/.env.acg, status marker, tunnel PID removed)"
 
 # ── Summary ───────────────────────────────────────────────────────────────────
 print_section "Teardown Complete"

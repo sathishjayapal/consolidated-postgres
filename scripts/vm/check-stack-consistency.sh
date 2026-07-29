@@ -24,10 +24,16 @@ set -euo pipefail
 #      "password authentication failed", no matter how consistent your
 #      env vars look on paper.
 #
+# Role drift is checked across all three deployed targets: VM (via Portainer,
+# needs env/vm.env), ACG (needs env/.env.acg), and prod (needs env/.env.prod).
+# Each target is skipped gracefully (not a FAIL) if its env file is missing
+# or the target is simply unreachable right now (e.g. an ACG sandbox that's
+# expired, or a tunnel that isn't up).
+#
 # Usage:
 #   ./check-stack-consistency.sh            # both checks
-#   ./check-stack-consistency.sh --config   # only the config/deploy check (no VM access needed)
-#   ./check-stack-consistency.sh --roles    # only the Postgres role-drift check (needs env/vm.env)
+#   ./check-stack-consistency.sh --config   # only the config/deploy check (no network access needed)
+#   ./check-stack-consistency.sh --roles    # only the Postgres role-drift checks (VM + ACG + prod)
 #################################################################
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -60,6 +66,8 @@ config_ymls_for() {
     dbcleaner)        echo "dbcleaner/dbcleaner-docker.yml" ;;
     verbose-barnacle) echo "my-github-cleaner/my-github-cleaner-local.yml" ;;
     sathish-projects-logger) echo "sathishlogger/sathishlogger-prod.yml" ;;
+    runs-ai-analyzer) echo "running/runs-ai-analyzer/runs-ai-analyzer-local.yml running/runs-ai-analyzer/runs-ai-analyzer-prod.yml" ;;
+    runs-app)         echo "" ;;  # no config-server YAML yet — runs-app reads its own local .env directly
     *)                echo "" ;;
   esac
 }
@@ -73,12 +81,14 @@ compose_service_for() {
     dbcleaner)        echo "dbcleaner" ;;
     verbose-barnacle) echo "" ;;
     sathish-projects-logger) echo "sathishlogger" ;;
+    runs-app)         echo "" ;;  # only its DB is on the VM stack, not an app container
+    runs-ai-analyzer) echo "" ;;  # only its DB is on the VM stack, not an app container
     *)                echo "" ;;
   esac
 }
 
 # Projects this checker knows about (only ones with a CONFIG_YMLS entry).
-CHECKED_PROJECTS="eventstracker dbcleaner verbose-barnacle sathish-projects-logger"
+CHECKED_PROJECTS="eventstracker dbcleaner verbose-barnacle sathish-projects-logger runs-app runs-ai-analyzer"
 
 extract_placeholders() {
   # Only bare ${VAR} (no colon) — these are hard requirements in Spring YAML
@@ -215,6 +225,66 @@ if $RUN_ROLES; then
     done
   fi
   echo ""
+
+  # ACG and prod both use ONE shared admin role (DB_USERNAME/DB_PASSWORD) across
+  # every project's database on a single Postgres instance — unlike the VM,
+  # there's no distinct per-project role to look up, just "can this shared user
+  # reach this project's database". A connection refused/timeout means the
+  # sandbox (or tunnel) simply isn't up right now — that's a skip, not a FAIL;
+  # only an auth-specific error (wrong password / role missing) is a real FAIL.
+  check_shared_role_target() {
+    local label="$1" env_file="$2"
+    echo "=== Postgres role drift ($label) ==="
+    if [ ! -f "$env_file" ]; then
+      echo -e "${YELLOW}skip${NC} $env_file not found — nothing to check"
+      echo ""
+      return
+    fi
+    local db_host db_pass
+    db_host=$(grep -E '^DB_HOST=' "$env_file" | tail -1 | cut -d= -f2-)
+    db_pass=$(grep -E '^DB_PASSWORD=' "$env_file" | tail -1 | cut -d= -f2-)
+    if [ -z "$db_host" ]; then
+      echo -e "${YELLOW}skip${NC} DB_HOST not set in $env_file"
+      echo ""
+      return
+    fi
+
+    for project in eventstracker runs-app runs-ai-analyzer; do
+      url_key=$(get_project_db_url_key "$project") || continue
+      user_key=$(get_project_db_user_env_key "$project") || continue
+      jdbc_url=$(grep -E "^${url_key}=" "$env_file" | tail -1 | cut -d= -f2-)
+      expected_user=$(grep -E "^${user_key}=" "$env_file" | tail -1 | cut -d= -f2-)
+      if [ -z "$jdbc_url" ] || [ -z "$expected_user" ]; then
+        echo -e "${YELLOW}skip${NC} $project — $url_key/$user_key not set in $env_file"
+        continue
+      fi
+
+      # jdbc:postgresql://host:port/dbname?query -> host, port, dbname
+      body="${jdbc_url#jdbc:postgresql://}"
+      host_port="${body%%/*}"
+      db_and_query="${body#*/}"
+      dbname="${db_and_query%%\?*}"
+      port="${host_port##*:}"
+      host="${host_port%%:*}"
+
+      output=$(PGCONNECT_TIMEOUT=5 PGPASSWORD="$db_pass" psql -h "$host" -p "$port" -U "$expected_user" -d "$dbname" -tAc "select 1" 2>&1) && rc=0 || rc=$?
+      if [ "$rc" -eq 0 ] && grep -q '^1$' <<<"$output"; then
+        echo -e "${GREEN}OK${NC}   $project  (role '$expected_user' can connect to $dbname on $label)"
+      elif grep -qi "role \"$expected_user\" does not exist" <<<"$output"; then
+        echo -e "${RED}FAIL${NC} $project: role '$expected_user' does NOT exist on $label ($host:$port) — credentials in $env_file are stale"
+        FAIL=1
+      elif grep -qi "password authentication failed" <<<"$output"; then
+        echo -e "${RED}FAIL${NC} $project: password for '$expected_user' rejected on $label ($host:$port) — credentials in $env_file are stale"
+        FAIL=1
+      else
+        echo -e "${YELLOW}skip${NC} $project — $label unreachable at $host:$port (sandbox likely not up right now)"
+      fi
+    done
+    echo ""
+  }
+
+  check_shared_role_target "ACG" "$REPO_ROOT/env/.env.acg"
+  check_shared_role_target "prod" "$REPO_ROOT/env/.env.prod"
 fi
 
 if [ "$FAIL" -eq 0 ]; then

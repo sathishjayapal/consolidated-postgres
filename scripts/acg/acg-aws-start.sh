@@ -12,7 +12,7 @@ set -euo pipefail
 #   3. Waits for SSM agent to register on relay EC2
 #   4. Opens SSM port-forwarding tunnel: localhost:5432 → EC2:5432
 #   5. Waits for all three databases to be ready
-#   6. Writes env/.env.cloud and updates each project's .env
+#   6. Writes env/.env.acg and updates each project's .env
 #
 # All three databases live in a single Docker pgvector/pgvector:pg16
 # container on the EC2. user_data creates them on first boot.
@@ -32,7 +32,9 @@ SHARED_DB_DIR="$(cd "$REPO_ROOT/../iAC-NikeRuns/aws-modules/shared-db" && pwd)"
 TFVARS_FILE="$SHARED_DB_DIR/terraform.tfvars"
 TUNNEL_PID_FILE="$REPO_ROOT/.tunnel.pid"
 LOCAL_PORT=5432    # single SSM tunnel: laptop → EC2 Docker PostgreSQL
-ENV_CLOUD="$REPO_ROOT/env/.env.cloud"
+ENV_ACG="$REPO_ROOT/env/.env.acg"
+PROJECT_ROOT="$(cd "$REPO_ROOT/.." && pwd)"
+source "$REPO_ROOT/scripts/lib/project-config.sh"
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; NC='\033[0m'
 print_status()  { echo -e "${GREEN}✓${NC} $1"; }
@@ -293,8 +295,8 @@ for db in "event-service" "runs_ai_analyzer_db" "my-github-cleaner" "dbcleaner";
   fi
 done
 
-# ── Write env/.env.cloud ──────────────────────────────────────────────────────────
-print_section "Writing env/.env.cloud"
+# ── Write env/.env.acg ──────────────────────────────────────────────────────────
+print_section "Writing env/.env.acg"
 
 JDBC_RA="jdbc:postgresql://localhost:${LOCAL_PORT}/runsapp_db"
 JDBC_ET="jdbc:postgresql://localhost:${LOCAL_PORT}/event-service"
@@ -318,32 +320,16 @@ JDBC_DC="jdbc:postgresql://localhost:${LOCAL_PORT}/dbcleaner"
   printf "DB_PASSWORD=%s\n" "$DB_PASS"
   printf "SECRET_ARN=%s\n\n" "$SECRET_ARN"
 
-  printf "# eventstracker\n"
-  printf "EVENTS_TRACKER_DB_URL=%s\n" "$JDBC_ET"
-  printf "EVENTS_TRACKER_DB_USER=%s\n" "$DB_USER"
-  printf "EVENTS_TRACKER_DB_PASSWORD=%s\n\n" "$DB_PASS"
-
-  printf "# runs-app\n"
-  printf "JDBC_DATABASE_URL=%s\n" "$JDBC_RA"
-  printf "JDBC_DATABASE_USERNAME=%s\n" "$DB_USER"
-  printf "JDBC_DATABASE_PASSWORD=%s\n\n" "$DB_PASS"
-
-  printf "# runs-ai-analyzer\n"
-  printf "RUNS_AI_ANALYZER_DB_URL=%s\n" "$JDBC_AI"
-  printf "RUNS_AI_ANALYZER_DB_USER=%s\n" "$DB_USER"
-  printf "RUNS_AI_ANALYZER_DB_PASSWORD=%s\n\n" "$DB_PASS"
-
-  printf "# verbose-barnacle (github cleaner)\n"
-  printf "GITHUB_CLEANER_DB_URL=%s\n" "$JDBC_GC"
-  printf "GITHUB_CLEANER_DB_USER=%s\n" "$DB_USER"
-  printf "GITHUB_CLEANER_DB_PASSWORD=%s\n\n" "$DB_PASS"
-
-  printf "# dbcleaner\n"
-  printf "DBCLEANER_DB_URL=%s\n" "$JDBC_DC"
-  printf "DBCLEANER_DB_USER=%s\n" "$DB_USER"
-  printf "DBCLEANER_DB_PASSWORD=%s\n\n" "$DB_PASS"
-} > "$ENV_CLOUD"
-print_status "Written: $ENV_CLOUD"
+  for entry in "eventstracker:$JDBC_ET" "runs-app:$JDBC_RA" "runs-ai-analyzer:$JDBC_AI" \
+               "verbose-barnacle:$JDBC_GC" "dbcleaner:$JDBC_DC"; do
+    project="${entry%%:*}"; jdbc="${entry#*:}"
+    printf "# %s\n" "$project"
+    printf "%s=%s\n" "$(get_project_db_url_key "$project")" "$jdbc"
+    printf "%s=%s\n" "$(get_project_db_user_env_key "$project")" "$DB_USER"
+    printf "%s=%s\n\n" "$(get_project_env_password_key "$project")" "$DB_PASS"
+  done
+} > "$ENV_ACG"
+print_status "Written: $ENV_ACG"
 
 # ── Update project .env files ─────────────────────────────────────────────────
 print_section "Updating Project .env Files"
@@ -373,37 +359,17 @@ resolve_env() {
   fi
 }
 
-upsert_env "$(resolve_env eventstracker)" \
-  "EVENTS_TRACKER_DB_URL=$JDBC_ET" \
-  "EVENTS_TRACKER_DB_USER=$DB_USER" \
-  "EVENTS_TRACKER_DB_PASSWORD=$DB_PASS"
-print_status "eventstracker/.env updated"
-
-upsert_env "$(resolve_env runs-app)" \
-  "JDBC_DATABASE_URL=$JDBC_RA" \
-  "JDBC_DATABASE_USERNAME=$DB_USER" \
-  "JDBC_DATABASE_PASSWORD=$DB_PASS"
-print_status "runs-app/.env updated"
-
-upsert_env "$(resolve_env runs-ai-analyzer)" \
-  "RUNS_AI_ANALYZER_DB_URL=$JDBC_AI" \
-  "RUNS_AI_ANALYZER_DB_USER=$DB_USER" \
-  "RUNS_AI_ANALYZER_DB_PASSWORD=$DB_PASS"
-print_status "runs-ai-analyzer/.env updated"
-
 # verbose-barnacle has no .env by default; create/update one so the app can
-# read cloud DB settings if configured to do so
-upsert_env "$(resolve_env verbose-barnacle)" \
-  "GITHUB_CLEANER_DB_URL=$JDBC_GC" \
-  "GITHUB_CLEANER_DB_USER=$DB_USER" \
-  "GITHUB_CLEANER_DB_PASSWORD=$DB_PASS"
-print_status "verbose-barnacle/.env updated"
-
-upsert_env "$(resolve_env dbcleaner)" \
-  "JDBC_DATABASE_URL=$JDBC_DC" \
-  "JDBC_DATABASE_USERNAME=$DB_USER" \
-  "JDBC_DATABASE_PASSWORD=$DB_PASS"
-print_status "dbcleaner/.env updated"
+# read ACG DB settings if configured to do so
+for entry in "eventstracker:$JDBC_ET" "runs-app:$JDBC_RA" "runs-ai-analyzer:$JDBC_AI" \
+             "verbose-barnacle:$JDBC_GC" "dbcleaner:$JDBC_DC"; do
+  project="${entry%%:*}"; jdbc="${entry#*:}"
+  upsert_env "$(resolve_env "$project")" \
+    "$(get_project_db_url_key "$project")=$jdbc" \
+    "$(get_project_db_user_env_key "$project")=$DB_USER" \
+    "$(get_project_env_password_key "$project")=$DB_PASS"
+  print_status "$project/.env updated"
+done
 
 # ── Status marker ─────────────────────────────────────────────────────────────
 ACG_AWS_STATUS_FILE="$REPO_ROOT/.ACG_AWS_STATUS"
