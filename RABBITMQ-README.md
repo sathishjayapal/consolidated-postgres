@@ -100,12 +100,16 @@ lsof -i :15672
 ### Orphaned containers
 ```bash
 # The scripts automatically handle this, but you can also manually clean:
-docker ps -a --filter "label=com.docker.compose.project=consolidated-postgres"
+# (scoped to the rabbitmq SERVICE label, not just the project — the project label is
+# now shared with eventstracker/runs-app/runs-ai-analyzer/mytracker's databases too)
+docker ps -a --filter "label=com.docker.compose.project=sathish-project-infra" --filter "label=com.docker.compose.service=rabbitmq"
 ```
 
 ## 📝 Manual Docker Commands (Not Recommended)
 
-If you prefer manual control:
+If you prefer manual control. **Always scope to the `rabbitmq` service explicitly** —
+`compose/docker-compose-local.yml` is shared with every other local project's database
+now, so a bare `up`/`down` with no service name would affect all of them:
 
 ```bash
 # Stop and remove container
@@ -113,13 +117,13 @@ docker stop sathishproject-rabbitmq
 docker rm sathishproject-rabbitmq
 
 # Start with compose
-docker compose -f compose/rabbitmq-compose.yml -p consolidated-postgres up -d --remove-orphans
+docker compose -f compose/docker-compose-local.yml --env-file env/.env.local -p sathish-project-infra up -d rabbitmq
 
 # View logs
 docker logs sathishproject-rabbitmq
 
 # Stop with compose
-docker compose -f compose/rabbitmq-compose.yml -p consolidated-postgres down
+docker compose -f compose/docker-compose-local.yml --env-file env/.env.local -p sathish-project-infra rm -f -s rabbitmq
 ```
 
 ## 🎯 Best Practices

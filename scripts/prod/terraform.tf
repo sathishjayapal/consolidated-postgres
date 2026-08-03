@@ -24,8 +24,8 @@ resource "digitalocean_database_cluster" "postgres" {
 
   # IMPORTANT: No prevent_destroy - this allows you to destroy the database
   # when not coding to save money. Database costs ~$0.50/day when running.
-  # Create with: ./cloud-start.sh
-  # Destroy with: ./cloud-stop.sh (exports data first)
+  # Create with: ./prod-start.sh
+  # Destroy with: ./prod-stop.sh (exports data first)
 }
 
 # Application databases within the cluster
@@ -69,7 +69,7 @@ resource "random_password" "db_password" {
   special = true
 }
 
-# Store password in env/.env.cloud for later use
+# Store password in env/.env.prod for later use
 output "database_password" {
   value       = random_password.db_password.result
   description = "Database password (generated once)"
@@ -108,7 +108,7 @@ output "runsai_db_name" {
   description = "runs-ai-analyzer database name"
 }
 
-# Spaces bucket removed - use cloud-stop.sh to export data manually
+# Spaces bucket removed - use prod-stop.sh to export data manually
 # or configure Spaces separately with additional credentials
 
 output "connection_string_eventstracker" {

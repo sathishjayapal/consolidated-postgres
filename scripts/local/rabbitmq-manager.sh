@@ -6,15 +6,28 @@
 set -e  # Exit on error
 
 # Resolve compose file relative to repo root so it works from any machine/folder.
+# This is now the SHARED local-dev compose file (eventstracker/runs-app/runs-ai-analyzer/
+# mytracker databases all live in it too) — every command below is deliberately scoped
+# to the `rabbitmq` service only. Never add a bare `up`/`down` here; that would affect
+# every sibling project's database.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-COMPOSE_FILE="$REPO_ROOT/compose/rabbitmq-compose.yml"
+COMPOSE_FILE="$REPO_ROOT/compose/docker-compose-local.yml"
+ENV_FILE="$REPO_ROOT/env/.env.local"
 if [ ! -f "$COMPOSE_FILE" ]; then
-    echo "❌ Could not find rabbit compose file: $COMPOSE_FILE"
+    echo "❌ Could not find compose file: $COMPOSE_FILE"
     exit 1
 fi
-PROJECT_NAME="consolidated-postgres"
+if [ ! -f "$ENV_FILE" ]; then
+    echo "❌ Could not find env file: $ENV_FILE (cp env/.env.local.example env/.env.local)"
+    exit 1
+fi
+# Must match the compose file's own top-level `name:` (sathish-project-infra) — a
+# mismatched -p here would create a second, divergent set of volumes for the exact
+# same services dev-up.sh already manages.
+PROJECT_NAME="sathish-project-infra"
 CONTAINER_NAME="sathishproject-rabbitmq"
+compose() { docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" -p "$PROJECT_NAME" "$@"; }
 
 # Colors for output
 RED='\033[0;31m'
@@ -39,11 +52,17 @@ container_running() {
     docker ps --filter "name=^/${CONTAINER_NAME}$" --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"
 }
 
-# Function to remove orphaned containers
+# Function to remove orphaned containers.
+# IMPORTANT: filtered by the `rabbitmq` compose *service* label specifically, not just
+# the shared project label — eventstracker-db/runs-app-db/etc. carry the same project
+# label now that this is a shared compose file, and must never be swept up here.
 remove_orphans() {
     print_info "Checking for orphaned containers..."
-    ORPHANS=$(docker ps -a --filter "label=com.docker.compose.project=$PROJECT_NAME" --format '{{.Names}}' | grep -v "$CONTAINER_NAME" || true)
-    
+    ORPHANS=$(docker ps -a \
+        --filter "label=com.docker.compose.project=$PROJECT_NAME" \
+        --filter "label=com.docker.compose.service=rabbitmq" \
+        --format '{{.Names}}' | grep -v "^${CONTAINER_NAME}$" || true)
+
     if [ -n "$ORPHANS" ]; then
         print_warning "Found orphaned containers: $ORPHANS"
         echo "$ORPHANS" | xargs -r docker rm -f
@@ -72,9 +91,9 @@ start_rabbitmq() {
     fi
     
     remove_orphans
-    
+
     print_info "Starting RabbitMQ with docker-compose..."
-    docker compose -f "$COMPOSE_FILE" -p "$PROJECT_NAME" up -d --remove-orphans
+    compose up -d rabbitmq
     
     print_info "Waiting for container to be ready..."
     sleep 3
@@ -101,7 +120,7 @@ stop_rabbitmq() {
     
     if container_running; then
         print_info "Stopping RabbitMQ..."
-        docker compose -f "$COMPOSE_FILE" -p "$PROJECT_NAME" down
+        compose rm -f -s rabbitmq
         print_success "RabbitMQ stopped successfully"
     else
         print_info "Container exists but is not running. Removing..."
@@ -155,16 +174,17 @@ show_logs() {
 # Function to clean everything
 clean_all() {
     echo ""
-    echo "=== Cleaning All RabbitMQ Resources ==="
-    
-    print_warning "This will remove all containers, volumes, and networks for $PROJECT_NAME"
+    echo "=== Cleaning RabbitMQ Resources ==="
+
+    print_warning "This will remove the RabbitMQ container and its data volume (queues/messages lost)."
+    print_warning "Sibling project databases in the same compose file are NOT touched."
     read -p "Are you sure? (y/N): " -n 1 -r
     echo
-    
+
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        print_info "Stopping and removing all resources..."
-        docker compose -f "$COMPOSE_FILE" -p "$PROJECT_NAME" down -v --remove-orphans
-        print_success "All resources cleaned successfully"
+        print_info "Stopping and removing RabbitMQ (container + volume)..."
+        compose rm -f -s -v rabbitmq
+        print_success "RabbitMQ resources cleaned successfully"
     else
         print_info "Clean operation cancelled"
     fi

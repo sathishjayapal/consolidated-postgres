@@ -17,7 +17,8 @@ WORKSPACE_ROOT="$(cd "$REPO_ROOT/.." && pwd)"
 PROJECT_ROOT="$WORKSPACE_ROOT"
 source "$REPO_ROOT/scripts/lib/project-config.sh"
 
-RABBIT_COMPOSE_FILE="$REPO_ROOT/compose/rabbitmq-compose.yml"
+LOCAL_COMPOSE_FILE="$(get_local_compose_file)"
+LOCAL_ENV_FILE="$(get_local_env_file)"
 CONFIG_SERVER_DIR="$(get_config_server_dir)"
 CONFIG_SERVER_CONTAINER="$(get_config_server_container)"
 RABBIT_CONTAINER="$(get_rabbitmq_container)"
@@ -83,20 +84,39 @@ stop_project_stack() {
   fi
 
   print_info "Stopping $project..."
-  args=(down)
-  if [ "$REMOVE_VOLUMES" = true ]; then
-    args+=(--volumes)
-  fi
 
-  if (cd "$project_dir" && docker compose "${args[@]}"); then
-    if [ "$REMOVE_VOLUMES" = true ]; then
-      print_status "$project stopped and volumes removed"
+  local local_service
+  if local_service="$(get_project_local_service "$project" 2>/dev/null)"; then
+    # Shared compose file (eventstracker/runs-app/runs-ai-analyzer/mytracker) — never a
+    # bare `down`, that would take down every sibling project's database too. Scope to
+    # this project's service only.
+    args=(-f "$LOCAL_COMPOSE_FILE" --env-file "$LOCAL_ENV_FILE" rm -f -s)
+    [ "$REMOVE_VOLUMES" = true ] && args+=(-v)
+    args+=("$local_service")
+    if docker compose "${args[@]}" >/dev/null 2>&1; then
+      print_status "$project stopped$([ "$REMOVE_VOLUMES" = true ] && echo " and volume removed")"
     else
-      print_status "$project stopped"
+      print_error "Failed to stop $project"
+      force_remove_container_if_exists "$container" || return 1
+      return 0
     fi
   else
-    print_error "Failed to stop $project"
-    return 1
+    # Standalone project compose file (verbose-barnacle, dbcleaner, sathish-projects-logger).
+    args=(down)
+    if [ "$REMOVE_VOLUMES" = true ]; then
+      args+=(--volumes)
+    fi
+
+    if (cd "$project_dir" && docker compose "${args[@]}"); then
+      if [ "$REMOVE_VOLUMES" = true ]; then
+        print_status "$project stopped and volumes removed"
+      else
+        print_status "$project stopped"
+      fi
+    else
+      print_error "Failed to stop $project"
+      return 1
+    fi
   fi
 
   # Ensure project DB container is stopped even when it was started from another compose file.
@@ -121,12 +141,16 @@ stop_config_server() {
 }
 
 stop_rabbitmq() {
-  if [ ! -f "$RABBIT_COMPOSE_FILE" ]; then
-    print_info "RabbitMQ compose file not found ($RABBIT_COMPOSE_FILE); skipping"
+  if [ ! -f "$LOCAL_COMPOSE_FILE" ]; then
+    print_info "Local compose file not found ($LOCAL_COMPOSE_FILE); skipping"
     return
   fi
   print_info "Stopping RabbitMQ..."
-  if docker compose -f "$RABBIT_COMPOSE_FILE" down >/dev/null 2>&1; then
+  # Scoped to the rabbitmq service only — this is a shared compose file now.
+  local args=(-f "$LOCAL_COMPOSE_FILE" --env-file "$LOCAL_ENV_FILE" rm -f -s)
+  [ "$REMOVE_VOLUMES" = true ] && args+=(-v)
+  args+=(rabbitmq)
+  if docker compose "${args[@]}" >/dev/null 2>&1; then
     print_status "RabbitMQ stopped"
   else
     print_error "Failed to stop RabbitMQ"

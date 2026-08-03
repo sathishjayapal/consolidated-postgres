@@ -25,6 +25,7 @@ setup() {
   mkdir -p "$TEST_WORKSPACE/IdeaProjects/runs-ai-analyzer"
   mkdir -p "$TEST_WORKSPACE/IdeaProjects/jubilant-memory/config"
   mkdir -p "$TEST_WORKSPACE/IdeaProjects/sathishproject-config-server"
+  mkdir -p "$TEST_WORKSPACE/IdeaProjects/consolidated-postgres/env"
 
   # Fallback tree
   mkdir -p "$PROJECT_ROOT/eventstracker"
@@ -45,8 +46,8 @@ teardown() {
 # PROJECTS array
 # ─────────────────────────────────────────────────────────────────────────────
 
-@test "PROJECTS array has exactly 3 entries" {
-  [ "${#PROJECTS[@]}" -eq 3 ]
+@test "PROJECTS array has exactly 7 entries" {
+  [ "${#PROJECTS[@]}" -eq 7 ]
 }
 
 @test "PROJECTS array contains eventstracker" {
@@ -91,9 +92,19 @@ teardown() {
 # Infra / shared paths
 # ─────────────────────────────────────────────────────────────────────────────
 
-@test "get_infra_config_dir returns jubilant-memory/config path" {
-  expected="$TEST_WORKSPACE/IdeaProjects/jubilant-memory/config"
+@test "get_infra_config_dir returns consolidated-postgres path" {
+  expected="$TEST_WORKSPACE/IdeaProjects/consolidated-postgres"
   [ "$(get_infra_config_dir)" = "$expected" ]
+}
+
+@test "get_local_env_file returns consolidated-postgres/env/.env.local" {
+  expected="$TEST_WORKSPACE/IdeaProjects/consolidated-postgres/env/.env.local"
+  [ "$(get_local_env_file)" = "$expected" ]
+}
+
+@test "get_local_compose_file returns consolidated-postgres/compose/docker-compose-local.yml" {
+  expected="$TEST_WORKSPACE/IdeaProjects/consolidated-postgres/compose/docker-compose-local.yml"
+  [ "$(get_local_compose_file)" = "$expected" ]
 }
 
 @test "get_config_server_dir returns sathishproject-config-server path" {
@@ -304,13 +315,13 @@ teardown() {
   # project .env exists but doesn't have the key
   echo "SOME_OTHER_KEY=value" > "$TEST_WORKSPACE/IdeaProjects/eventstracker/.env"
   echo "EVENTS_TRACKER_DB_USER=infra_user" \
-    > "$TEST_WORKSPACE/IdeaProjects/jubilant-memory/config/.env"
+    > "$TEST_WORKSPACE/IdeaProjects/consolidated-postgres/env/.env.local"
   [ "$(get_project_db_user "eventstracker")" = "infra_user" ]
 }
 
 @test "get_project_db_user: eventstracker uses infra .env when no project .env at all" {
   echo "EVENTS_TRACKER_DB_USER=infra_only_user" \
-    > "$TEST_WORKSPACE/IdeaProjects/jubilant-memory/config/.env"
+    > "$TEST_WORKSPACE/IdeaProjects/consolidated-postgres/env/.env.local"
   [ "$(get_project_db_user "eventstracker")" = "infra_only_user" ]
 }
 

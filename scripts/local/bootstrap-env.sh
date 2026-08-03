@@ -18,9 +18,18 @@ resolve_project_dir() {
   fi
 }
 
-INFRA_DIR="$(resolve_project_dir jubilant-memory)/config"
-INFRA_ENV="$INFRA_DIR/.env"
-INFRA_EXAMPLE="$INFRA_DIR/.env.example"
+# Golden local-dev infra credentials (DB/RabbitMQ) — lives in consolidated-postgres now.
+# Resolved via resolve_project_dir (not $REPO_ROOT) so tests can sandbox it the same way
+# as every other path here, by redirecting $HOME.
+INFRA_DIR="$(resolve_project_dir consolidated-postgres)/env"
+INFRA_ENV="$INFRA_DIR/.env.local"
+INFRA_EXAMPLE="$INFRA_DIR/.env.local.example"
+
+# Config-server credentials (GIT_URI/encrypt_key/username/pass/APP_PORT) are a separate
+# concern and stay in jubilant-memory/config — that's the git repo the config-server
+# itself is backed by, unrelated to local-dev DB/broker provisioning.
+CONFIG_SERVER_SRC_ENV="$(resolve_project_dir jubilant-memory)/config/.env"
+CONFIG_SERVER_SRC_EXAMPLE="$(resolve_project_dir jubilant-memory)/config/.env.example"
 
 EVENTSTRACKER_DIR="$(resolve_project_dir eventstracker)"
 EVENTSTRACKER_ENV="$EVENTSTRACKER_DIR/.env"
@@ -83,7 +92,7 @@ set_if_blank_or_placeholder() {
   fi
 }
 
-# 1) Infra env (single golden source)
+# 1) Infra env (golden source for local-dev DB/RabbitMQ credentials)
 ensure_env_file "$INFRA_ENV" "$INFRA_EXAMPLE"
 
 set_if_blank_or_placeholder "$INFRA_ENV" "EVENTS_TRACKER_DB_NAME" "event-service"
@@ -98,17 +107,12 @@ set_if_blank_or_placeholder "$INFRA_ENV" "RUNS_AI_ANALYZER_DB_NAME" "runs_ai_ana
 set_if_blank_or_placeholder "$INFRA_ENV" "RUNS_AI_ANALYZER_DB_USER" "runsai_local"
 set_if_blank_or_placeholder "$INFRA_ENV" "RUNS_AI_ANALYZER_DB_PASSWORD" "$(rand_secret)"
 
+set_if_blank_or_placeholder "$INFRA_ENV" "MYTRACKER_DB_NAME" "postgres"
+set_if_blank_or_placeholder "$INFRA_ENV" "MYTRACKER_DB_USER" "mytracker_local"
+set_if_blank_or_placeholder "$INFRA_ENV" "MYTRACKER_DB_PASSWORD" "$(rand_secret)"
+
 set_if_blank_or_placeholder "$INFRA_ENV" "RABBITMQ_USERNAME" "rabbit_local"
 set_if_blank_or_placeholder "$INFRA_ENV" "RABBITMQ_PASSWORD" "$(rand_secret)"
-set_if_blank_or_placeholder "$INFRA_ENV" "MYTRACKER_DB_NAME" "postgres"
-set_if_blank_or_placeholder "$INFRA_ENV" "SHEDLOCK_DB_NAME" "postgres"
-
-# Config server credentials and backing config repo
-set_if_blank_or_placeholder "$INFRA_ENV" "GIT_URI" "https://github.com/sathishjayapal/jubilant-memory"
-set_if_blank_or_placeholder "$INFRA_ENV" "encrypt_key" "$(rand_secret)"
-set_if_blank_or_placeholder "$INFRA_ENV" "username" "cfg_local"
-set_if_blank_or_placeholder "$INFRA_ENV" "pass" "$(rand_secret)"
-set_if_blank_or_placeholder "$INFRA_ENV" "APP_PORT" "8888"
 
 # EventTracker app-level secrets consumed from config repo placeholders
 set_if_blank_or_placeholder "$INFRA_ENV" "EVENT_DOMAIN_USER" "eventdomain_local"
@@ -116,10 +120,25 @@ set_if_blank_or_placeholder "$INFRA_ENV" "EVENT_DOMAIN_USER_PASSWORD" "$(rand_se
 
 chmod 600 "$INFRA_ENV"
 
-# Load infra env values for propagation
+# 1b) Config-server env (golden source for GIT_URI/encrypt_key/username/pass — stays in
+# jubilant-memory/config, unrelated to local-dev DB/broker provisioning above)
+if [ -f "$CONFIG_SERVER_SRC_ENV" ] || [ -f "$CONFIG_SERVER_SRC_EXAMPLE" ]; then
+  ensure_env_file "$CONFIG_SERVER_SRC_ENV" "$CONFIG_SERVER_SRC_EXAMPLE"
+  set_if_blank_or_placeholder "$CONFIG_SERVER_SRC_ENV" "GIT_URI" "https://github.com/sathishjayapal/jubilant-memory"
+  set_if_blank_or_placeholder "$CONFIG_SERVER_SRC_ENV" "encrypt_key" "$(rand_secret)"
+  set_if_blank_or_placeholder "$CONFIG_SERVER_SRC_ENV" "username" "cfg_local"
+  set_if_blank_or_placeholder "$CONFIG_SERVER_SRC_ENV" "pass" "$(rand_secret)"
+  set_if_blank_or_placeholder "$CONFIG_SERVER_SRC_ENV" "APP_PORT" "8888"
+  chmod 600 "$CONFIG_SERVER_SRC_ENV"
+else
+  print_info "No jubilant-memory/config/.env(.example) found — skipping config-server credential bootstrap"
+fi
+
+# Load both golden sources for propagation below
 # shellcheck source=/dev/null
 set -a
 source "$INFRA_ENV"
+[ -f "$CONFIG_SERVER_SRC_ENV" ] && source "$CONFIG_SERVER_SRC_ENV"
 set +a
 
 # 2) EventTracker app env
@@ -161,5 +180,6 @@ EOF
 fi
 
 print_info "Environment bootstrap complete"
-print_info "Golden source: $INFRA_ENV"
+print_info "Golden source (DB/RabbitMQ): $INFRA_ENV"
+print_info "Golden source (config-server): $CONFIG_SERVER_SRC_ENV"
 

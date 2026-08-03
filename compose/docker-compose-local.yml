@@ -1,0 +1,121 @@
+# Local dev infra: project databases + RabbitMQ (+ optional mongodb).
+#
+# Moved here from jubilant-memory/config/docker-compose.yml — that repo's job is application
+# config (Spring Cloud Config YAMLs), not local dev infra provisioning. See docs/ENVIRONMENTS.md.
+#
+# `name: sathish-project-infra` is preserved on purpose: it's the exact compose project name
+# jubilant-memory/config/docker-compose.yml used, so existing named volumes
+# (sathish-project-infra_event_service_pg_data, sathish-project-infra_runs_ai_shared_pg_data)
+# are recognized as-is with no data migration needed.
+#
+# Credentials come from env/.env.local (cp env/.env.local.example env/.env.local first).
+#
+# Usage:
+#   docker compose -f compose/docker-compose-local.yml --env-file env/.env.local up -d postgres rabbitmq
+#   docker compose -f compose/docker-compose-local.yml --env-file env/.env.local --profile runs-app up -d runs-app-db
+#   docker compose -f compose/docker-compose-local.yml --env-file env/.env.local --profile runs-ai-analyzer up -d runs-ai-analyzer-db
+#   docker compose -f compose/docker-compose-local.yml --env-file env/.env.local --profile mytracker up -d mytracker-db
+#   docker compose -f compose/docker-compose-local.yml --env-file env/.env.local --profile gotoaws-sathish up -d mongodb
+name: sathish-project-infra
+services:
+  postgres:
+    container_name: event-service-db
+    image: postgres:17.5
+    environment:
+      - POSTGRES_DB=${EVENTS_TRACKER_DB_NAME:-event-service}
+      - POSTGRES_USER=${EVENTS_TRACKER_DB_USER:?set in env/.env.local}
+      - POSTGRES_PASSWORD=${EVENTS_TRACKER_DB_PASSWORD:?set in env/.env.local}
+    ports:
+      - 6433:5432
+    volumes:
+      - event_service_pg_data:/var/lib/postgresql/data
+
+  runs-app-db:
+    container_name: runs-app-postgres
+    image: postgres:18.1
+    profiles:
+      - runs-app
+    environment:
+      POSTGRES_DB: ${RUNS_APP_DB_NAME:-runsapp_db}
+      POSTGRES_USER: ${RUNS_APP_DB_USER:?set in env/.env.local}
+      POSTGRES_PASSWORD: ${RUNS_APP_DB_PASSWORD:?set in env/.env.local}
+    ports:
+      - "5443:5432"
+    volumes:
+      # matches the pre-existing volume from runs-app's own (now-removed) docker-compose.yml
+      - postgres-data:/var/lib/postgresql
+
+  runs-ai-analyzer-db:
+    container_name: runs-ai-analyzer-db
+    image: pgvector/pgvector:pg17
+    profiles:
+      - runs-ai-analyzer
+    environment:
+      POSTGRES_DB: ${RUNS_AI_ANALYZER_DB_NAME:-runs_ai_analyzer_db}
+      POSTGRES_USER: ${RUNS_AI_ANALYZER_DB_USER:?set in env/.env.local}
+      POSTGRES_PASSWORD: ${RUNS_AI_ANALYZER_DB_PASSWORD:?set in env/.env.local}
+    ports:
+      - "5444:5432"
+    volumes:
+      - runs_ai_shared_pg_data:/var/lib/postgresql/data
+
+  mytracker-db:
+    container_name: mytracker-db
+    image: postgres:17
+    profiles:
+      - mytracker
+    environment:
+      POSTGRES_DB: ${MYTRACKER_DB_NAME:-postgres}
+      POSTGRES_USER: ${MYTRACKER_DB_USER:?set in env/.env.local}
+      POSTGRES_PASSWORD: ${MYTRACKER_DB_PASSWORD:?set in env/.env.local}
+    ports:
+      - "5440:5432"
+    volumes:
+      - mytracker_pg_data:/var/lib/postgresql/data
+
+  rabbitmq:
+    container_name: sathishproject-rabbitmq
+    image: rabbitmq:4.1-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+  # Optional — not part of consolidated-postgres's tracked projects (gotoaws-sathish isn't in
+  # projects.txt), kept here because it was previously bundled into the same infra file and
+  # nothing else currently owns it. `docker compose up` alone will NOT start this.
+  mongodb:
+    container_name: mongodb_gotoaws_sathish
+    image: mongo:8.0.13
+    profiles:
+      - gotoaws-sathish
+    environment:
+      - MONGO_INITDB_DATABASE=gotoaws-sathish
+    command:
+      - --replSet
+      - rs0
+      - --bind_ip_all
+    ports:
+      - 27017:27017
+    healthcheck:
+      test: test $$(mongosh --quiet --eval "try {rs.initiate({_id:'rs0',members:[{_id:0,host:\"mongodb:27017\"}]})} catch(e) {rs.status().ok}") -eq 1
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  event_service_pg_data:
+  postgres-data:
+    name: runs-app_postgres-data
+  runs_ai_shared_pg_data:
+  mytracker_pg_data:
+  rabbitmq_data:

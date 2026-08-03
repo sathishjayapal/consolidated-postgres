@@ -2,11 +2,11 @@
 set -euo pipefail
 
 #################################################################
-# Diagnostic Script - Check what's happening with cloud-start.sh
+# Diagnostic Script - Check what's happening with prod-start.sh
 #
-# Usage: ./scripts/cloud/diagnose.sh
+# Usage: ./scripts/prod/diagnose.sh
 #
-# This script will help identify where ./scripts/cloud/cloud-start.sh is stopping
+# This script will help identify where ./scripts/prod/prod-start.sh is stopping
 #################################################################
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -129,7 +129,7 @@ echo "=========================================="
 echo "✅ All checks passed!"
 echo "=========================================="
 echo ""
-echo "Next step: Run ./scripts/cloud/cloud-start.sh"
+echo "Next step: Run ./scripts/prod/prod-start.sh"
 echo ""
 echo "When it asks 'Continue with creation? (yes/no)'"
 echo "Type: yes"

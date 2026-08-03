@@ -59,7 +59,7 @@ check_path_resolution() {
 }
 
 echo "[1/3] Checking shared directory resolution"
-check_path_resolution "jubilant-memory/config" "$(get_infra_config_dir)"
+check_path_resolution "consolidated-postgres (local infra)" "$(get_infra_config_dir)"
 check_path_resolution "sathishproject-config-server" "$(get_config_server_dir)"
 
 for project in "${PROJECTS[@]}"; do

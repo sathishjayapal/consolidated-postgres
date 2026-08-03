@@ -142,7 +142,14 @@ sync_project_compose() {
   local project="$1" compose port
   port=$(get_project_port "$project")
   case "$project" in
-    eventstracker)    compose="$(resolve_project_dir jubilant-memory)/config/docker-compose.yml" ;;
+    # These four share consolidated-postgres/compose/docker-compose-local.yml, which
+    # hardcodes the correct port for each service by construction — there's nothing to
+    # drift/sync, and the single-match regex below would be wrong for a multi-service
+    # shared file anyway (it'd only ever touch the first "NNNN:5432" it finds).
+    eventstracker|runs-app|runs-ai-analyzer|mytracker)
+      print_info "$project uses the shared local compose file — port already fixed, skipped"
+      return 0
+      ;;
     *)                compose="$(resolve_project_dir "$project")/docker-compose.yml" ;;
   esac
   [ -f "$compose" ] || { print_info "No compose for $project at $compose — skipped"; return 0; }

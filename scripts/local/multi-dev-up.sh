@@ -7,6 +7,8 @@ set -euo pipefail
 # Usage: ./multi-dev-up.sh [options]
 #
 #   --reset     Drop and recreate all databases (clean slate)
+#   --acg       Point apps at a running ACG sandbox instead of local containers
+#   --prod      Point apps at the persistent prod DB instead of local containers
 #   --help      Show this help message
 #
 # What it does:
@@ -26,9 +28,6 @@ WORKSPACE_ROOT="$(cd "$REPO_ROOT/.." && pwd)"
 cd "$REPO_ROOT"
 
 # Configuration
-RABBIT_COMPOSE_FILE="$REPO_ROOT/compose/rabbitmq-compose.yml"
-RABBIT_CONTAINER_NAME="sathishproject-rabbitmq"
-
 PROJECT_ROOT="$WORKSPACE_ROOT"
 source "$REPO_ROOT/scripts/lib/project-config.sh"
 
@@ -36,7 +35,8 @@ RABBIT_CONTAINER_NAME="$(get_rabbitmq_container)"
 CONFIG_SERVER_CONTAINER="$(get_config_server_container)"
 CONFIG_SERVER_DIR="$(get_config_server_dir)"
 CONFIG_SERVER_ENV="$(get_config_server_env_file)"
-INFRA_DIR="$(get_infra_config_dir)"
+LOCAL_COMPOSE_FILE="$(get_local_compose_file)"
+LOCAL_ENV_FILE="$(get_local_env_file)"
 
 # Colors
 RED='\033[0;31m'
@@ -45,7 +45,8 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-CLOUD_MODE=false
+ACG_MODE=false
+PROD_MODE=false
 RESET_DB=false
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -53,8 +54,12 @@ while [[ $# -gt 0 ]]; do
       RESET_DB=true
       shift
       ;;
-    --cloud)
-      CLOUD_MODE=true
+    --acg)
+      ACG_MODE=true
+      shift
+      ;;
+    --prod)
+      PROD_MODE=true
       shift
       ;;
     --help)
@@ -67,6 +72,14 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+if $ACG_MODE && $PROD_MODE; then
+  echo "--acg and --prod are mutually exclusive"
+  exit 1
+fi
+PROFILE_FLAG=""
+$ACG_MODE && PROFILE_FLAG="--acg"
+$PROD_MODE && PROFILE_FLAG="--prod"
 
 print_status() {
   echo -e "${GREEN}✓${NC} $1"
@@ -117,19 +130,19 @@ if ! docker ps > /dev/null 2>&1; then
   preflight_ok=false
 fi
 
-if [ ! -f "$INFRA_DIR/docker-compose.yml" ]; then
-  print_error "Missing $INFRA_DIR/docker-compose.yml — clone jubilant-memory as a sibling of this repo"
+if [ ! -f "$LOCAL_COMPOSE_FILE" ]; then
+  print_error "Missing $LOCAL_COMPOSE_FILE"
   preflight_ok=false
 else
-  print_status "jubilant-memory/config found"
-  if [ ! -f "$INFRA_DIR/.env" ]; then
-    print_error "Missing $INFRA_DIR/.env"
-    print_info "Create it first: cp $INFRA_DIR/.env.example $INFRA_DIR/.env"
+  print_status "compose/docker-compose-local.yml found"
+  if [ ! -f "$LOCAL_ENV_FILE" ]; then
+    print_error "Missing $LOCAL_ENV_FILE"
+    print_info "Create it first: cp env/.env.local.example $LOCAL_ENV_FILE"
     preflight_ok=false
   else
     for _required in EVENTS_TRACKER_DB_USER EVENTS_TRACKER_DB_PASSWORD RUNS_AI_ANALYZER_DB_USER RUNS_AI_ANALYZER_DB_PASSWORD RABBITMQ_USERNAME RABBITMQ_PASSWORD; do
-      if ! grep -qE "^${_required}=" "$INFRA_DIR/.env"; then
-        print_error "$_required missing in $INFRA_DIR/.env"
+      if ! grep -qE "^${_required}=" "$LOCAL_ENV_FILE"; then
+        print_error "$_required missing in $LOCAL_ENV_FILE"
         preflight_ok=false
       fi
     done
@@ -167,19 +180,22 @@ echo ""
 
 start_rabbitmq() {
   local rabbit_user rabbit_pass
-  rabbit_user=$(grep -E '^RABBITMQ_USERNAME=' "$INFRA_DIR/.env" | tail -n 1 | cut -d'=' -f2- || true)
-  rabbit_pass=$(grep -E '^RABBITMQ_PASSWORD=' "$INFRA_DIR/.env" | tail -n 1 | cut -d'=' -f2- || true)
+  rabbit_user=$(grep -E '^RABBITMQ_USERNAME=' "$LOCAL_ENV_FILE" | tail -n 1 | cut -d'=' -f2- || true)
+  rabbit_pass=$(grep -E '^RABBITMQ_PASSWORD=' "$LOCAL_ENV_FILE" | tail -n 1 | cut -d'=' -f2- || true)
 
   if [ -z "$rabbit_user" ] || [ -z "$rabbit_pass" ]; then
-    print_error "RABBITMQ_USERNAME/RABBITMQ_PASSWORD missing in $INFRA_DIR/.env"
+    print_error "RABBITMQ_USERNAME/RABBITMQ_PASSWORD missing in $LOCAL_ENV_FILE"
     exit 1
   fi
 
-  if [ ! -f "$RABBIT_COMPOSE_FILE" ]; then
-    print_info "RabbitMQ compose file not found ($RABBIT_COMPOSE_FILE); skipping broker startup"
+  if [ ! -f "$LOCAL_COMPOSE_FILE" ]; then
+    print_info "Local compose file not found ($LOCAL_COMPOSE_FILE); skipping broker startup"
     return
   fi
 
+  # rabbitmq is one service among several in the shared compose file now — always
+  # scope to it explicitly (`up -d rabbitmq`), never a bare `up -d`, which would
+  # also start every other project's database.
   if docker ps --filter "name=$RABBIT_CONTAINER_NAME" --format '{{.Names}}' | grep -q "^$RABBIT_CONTAINER_NAME$"; then
     print_status "RabbitMQ already running"
   elif docker ps -a --filter "name=$RABBIT_CONTAINER_NAME" --format '{{.Names}}' | grep -q "^$RABBIT_CONTAINER_NAME$"; then
@@ -187,11 +203,11 @@ start_rabbitmq() {
     docker start "$RABBIT_CONTAINER_NAME" >/dev/null 2>&1 || true
   else
     print_info "Starting RabbitMQ..."
-    docker compose --env-file "$INFRA_DIR/.env" -f "$RABBIT_COMPOSE_FILE" up -d
+    docker compose --env-file "$LOCAL_ENV_FILE" -f "$LOCAL_COMPOSE_FILE" up -d rabbitmq
   fi
 
   print_info "Starting RabbitMQ..."
-  docker compose --env-file "$INFRA_DIR/.env" -f "$RABBIT_COMPOSE_FILE" up -d >/dev/null 2>&1 || true
+  docker compose --env-file "$LOCAL_ENV_FILE" -f "$LOCAL_COMPOSE_FILE" up -d rabbitmq >/dev/null 2>&1 || true
 
   print_info "Waiting up to 60s for RabbitMQ health..."
   attempts=0
@@ -265,11 +281,11 @@ start_config_server() {
   exit 1
 }
 
-if [ "$CLOUD_MODE" = false ]; then
+if [ -z "$PROFILE_FLAG" ]; then
   start_config_server
   start_rabbitmq
 else
-  print_info "Cloud mode detected -- skipping local config-server and RabbitMQ startup"
+  print_info "$PROFILE_FLAG mode detected -- skipping local config-server and RabbitMQ startup"
 fi
 
 for project in "${PROJECTS[@]}"; do
@@ -286,17 +302,17 @@ for project in "${PROJECTS[@]}"; do
   project_upper=$(echo "$project" | tr '[:lower:]' '[:upper:]')
   print_header "$project_upper"
 
-  if [ "$RESET_DB" = true ] && [ "$CLOUD_MODE" = false ]; then
+  if [ "$RESET_DB" = true ] && [ -z "$PROFILE_FLAG" ]; then
     print_info "Resetting $project (--reset flag)..."
     (cd "$project_dir" && ./dev-up.sh --reset)
   elif [ "$RESET_DB" = true ]; then
-    print_info "--reset ignored for $project in cloud mode"
+    print_info "--reset ignored for $project in $PROFILE_FLAG mode"
   fi
 
   print_info "Starting $project..."
-  if [ "$CLOUD_MODE" = true ]; then
-    (cd "$project_dir" && ./dev-up.sh --cloud)
-    print_warn "$project cloud mode: skipping local DB verification"
+  if [ -n "$PROFILE_FLAG" ]; then
+    (cd "$project_dir" && ./dev-up.sh "$PROFILE_FLAG")
+    print_warn "$project $PROFILE_FLAG mode: skipping local DB verification"
     continue
   else
     (cd "$project_dir" && ./dev-up.sh)
@@ -345,7 +361,7 @@ done
 
 print_header "Seed Data Verification"
 
-if [ "$CLOUD_MODE" = false ]; then
+if [ -z "$PROFILE_FLAG" ]; then
   # EventTracker seed check
   if password=$(get_project_password "eventstracker"); then
     _et_port=$(get_project_port "eventstracker")

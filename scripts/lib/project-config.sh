@@ -41,8 +41,22 @@ resolve_project_dir() {
   fi
 }
 
+# The "golden" local-dev credentials + compose file live in consolidated-postgres itself now
+# (env/.env.local, compose/docker-compose-local.yml) — moved out of jubilant-memory/config,
+# which is scoped to application config (Spring Cloud Config YAMLs) only from here on.
+# get_infra_config_dir() returns the consolidated-postgres repo root (not a single directory
+# holding both files, since env/ and compose/ are siblings) — use the two helpers below for
+# the actual file paths.
 get_infra_config_dir() {
-  echo "$(resolve_project_dir jubilant-memory)/config"
+  resolve_project_dir consolidated-postgres
+}
+
+get_local_env_file() {
+  echo "$(get_infra_config_dir)/env/.env.local"
+}
+
+get_local_compose_file() {
+  echo "$(get_infra_config_dir)/compose/docker-compose-local.yml"
 }
 
 get_config_server_dir() {
@@ -67,14 +81,10 @@ get_project_db_user() {
   project_dir=$(resolve_project_dir "$project")
   local env_file="$project_dir/.env"
   local key default_user
+  key=$(get_project_db_user_env_key "$project") || return 1
   case "$project" in
-    eventstracker)     key="EVENTS_TRACKER_DB_USER"; default_user="" ;;
-    runs-app)          key="JDBC_DATABASE_USERNAME"; default_user="" ;;
-    runs-ai-analyzer)  key="RUNS_AI_ANALYZER_DB_USER"; default_user="" ;;
-    verbose-barnacle)  key="GITHUB_CLEANER_DB_USER"; default_user="postgres" ;;  # project compose default
-    dbcleaner)         key="JDBC_DATABASE_USERNAME"; default_user="postgres" ;;
-    sathish-projects-logger) key="DATABASE_USERNAME"; default_user="" ;;
-    *)                 return 1 ;;
+    verbose-barnacle|dbcleaner) default_user="postgres" ;;  # project compose default
+    *)                          default_user="" ;;
   esac
   # Try project .env first
   if [ -f "$env_file" ]; then
@@ -97,7 +107,7 @@ get_project_db_user() {
   # eventstracker: also try infra .env (golden source)
   if [ "$project" = "eventstracker" ]; then
     local infra_env
-    infra_env="$(resolve_project_dir jubilant-memory)/config/.env"
+    infra_env="$(get_local_env_file)"
     if [ -f "$infra_env" ]; then
       local value
       value=$(grep -E "^${key}=" "$infra_env" | tail -n 1 | cut -d'=' -f2-)
@@ -147,6 +157,7 @@ get_project_db_name() {
     verbose-barnacle) echo "my-github-cleaner" ;;   # verbose-barnacle docker-compose default
     dbcleaner)        echo "dbcleaner" ;;
     sathish-projects-logger) echo "sathishlogger" ;;
+    mytracker)        echo "postgres" ;;
     *)                return 1 ;;
   esac
 }
@@ -159,6 +170,7 @@ get_project_port() {
     verbose-barnacle) echo "5439" ;;
     dbcleaner)        echo "5433" ;;
     sathish-projects-logger) echo "8432" ;;
+    mytracker)        echo "5440" ;;
     *)                return 1 ;;
   esac
 }
@@ -171,6 +183,7 @@ get_project_container() {
     verbose-barnacle) echo "verbose-barnacle-postgres-1" ;;  # compose default naming
     dbcleaner)        echo "dbcleaner-postgres-1" ;;
     sathish-projects-logger) echo "sathishlogger-postgres" ;;  # project compose container_name
+    mytracker)        echo "mytracker-db" ;;
     *)                return 1 ;;
   esac
 }
@@ -183,6 +196,7 @@ get_project_password_env_var() {
     verbose-barnacle) echo "GITHUB_CLEANER_DB_PASSWORD" ;;
     dbcleaner)        echo "DBCLEANER_DB_PASSWORD" ;;
     sathish-projects-logger) echo "SATHISHLOGGER_DB_PASSWORD" ;;
+    mytracker)        echo "MYTRACKER_DB_PASSWORD" ;;
     *)                return 1 ;;
   esac
 }
@@ -195,6 +209,27 @@ get_project_env_password_key() {
     verbose-barnacle) echo "GITHUB_CLEANER_DB_PASSWORD" ;;
     dbcleaner)        echo "JDBC_DATABASE_PASSWORD" ;;
     sathish-projects-logger) echo "DATABASE_PASSWORD" ;;
+    mytracker)        echo "MYTRACKER_DB_PASSWORD" ;;
+    *)                return 1 ;;
+  esac
+}
+
+# The DB username key as it actually appears in the project's OWN .env file
+# (app-runtime convention — what that project's Spring config reads). This is
+# a different domain from get_project_db_user_key()/get_project_password_env_var(),
+# which are the key names pushed into the VM Portainer stack env; the two only
+# happen to match for some projects. Any writer that populates a PROJECT's own
+# .env (dev-up.sh --acg/--prod, local mode) must use this + get_project_db_url_key()
+# + get_project_env_password_key() — the three domain-A keys — not the VM ones.
+get_project_db_user_env_key() {
+  case "$1" in
+    eventstracker)    echo "EVENTS_TRACKER_DB_USER" ;;
+    runs-app)         echo "JDBC_DATABASE_USERNAME" ;;
+    runs-ai-analyzer) echo "RUNS_AI_ANALYZER_DB_USER" ;;
+    verbose-barnacle) echo "GITHUB_CLEANER_DB_USER" ;;
+    dbcleaner)        echo "JDBC_DATABASE_USERNAME" ;;
+    sathish-projects-logger) echo "DATABASE_USERNAME" ;;
+    mytracker)        echo "MYTRACKER_DB_USER" ;;
     *)                return 1 ;;
   esac
 }
@@ -237,6 +272,7 @@ get_project_db_image() {
     verbose-barnacle) echo "postgres:17.5" ;;
     dbcleaner)        echo "postgres:18.3" ;;
     sathish-projects-logger) echo "postgres:15-alpine" ;;  # matches project's own local compose
+    mytracker)        echo "postgres:17" ;;
     *)                return 1 ;;
   esac
 }
@@ -245,7 +281,7 @@ get_project_db_image() {
 get_project_pg_mount() {
   case "$1" in
     runs-app|dbcleaner) echo "/var/lib/postgresql" ;;        # postgres 18+
-    eventstracker|runs-ai-analyzer|verbose-barnacle|sathish-projects-logger) echo "/var/lib/postgresql/data" ;;
+    eventstracker|runs-ai-analyzer|verbose-barnacle|sathish-projects-logger|mytracker) echo "/var/lib/postgresql/data" ;;
     *)                return 1 ;;
   esac
 }
@@ -259,6 +295,32 @@ get_project_db_service() {
     verbose-barnacle) echo "github-cleaner-db" ;;
     dbcleaner)        echo "dbcleaner-db" ;;
     sathish-projects-logger) echo "sathishlogger-db" ;;
+    mytracker)        echo "mytracker-db" ;;
+    *)                return 1 ;;
+  esac
+}
+
+# Service name inside compose/docker-compose-local.yml (LOCAL profile only — differs
+# from get_project_db_service, which is the VM stack's service naming). Empty return
+# (via `return 1`) means the project isn't on the shared local compose file and still
+# has its own standalone docker-compose.yml (verbose-barnacle, dbcleaner, sathish-projects-logger).
+get_project_local_service() {
+  case "$1" in
+    eventstracker)    echo "postgres" ;;
+    runs-app)         echo "runs-app-db" ;;
+    runs-ai-analyzer) echo "runs-ai-analyzer-db" ;;
+    mytracker)        echo "mytracker-db" ;;
+    *)                return 1 ;;
+  esac
+}
+
+# Compose --profile name gating that service in docker-compose-local.yml (empty/unset
+# for eventstracker — it's always-on, no profile gate).
+get_project_local_profile() {
+  case "$1" in
+    runs-app)         echo "runs-app" ;;
+    runs-ai-analyzer) echo "runs-ai-analyzer" ;;
+    mytracker)        echo "mytracker" ;;
     *)                return 1 ;;
   esac
 }
@@ -272,6 +334,7 @@ get_project_vm_volume() {
     verbose-barnacle) echo "pg_data_github_cleaner" ;;
     dbcleaner)        echo "pg_data_dbcleaner" ;;
     sathish-projects-logger) echo "pg_data_sathishlogger" ;;
+    mytracker)        echo "pg_data_mytracker" ;;
     *)                return 1 ;;
   esac
 }
@@ -286,6 +349,7 @@ get_project_db_name_key() {
     verbose-barnacle) echo "GITHUB_CLEANER_DB_NAME" ;;
     dbcleaner)        echo "DBCLEANER_DB_NAME" ;;
     sathish-projects-logger) echo "SATHISHLOGGER_DB_NAME" ;;
+    mytracker)        echo "MYTRACKER_DB_NAME" ;;
     *)                return 1 ;;
   esac
 }
@@ -298,6 +362,7 @@ get_project_db_user_key() {
     verbose-barnacle) echo "GITHUB_CLEANER_DB_USER" ;;
     dbcleaner)        echo "DBCLEANER_DB_USER" ;;
     sathish-projects-logger) echo "SATHISHLOGGER_DB_USER" ;;
+    mytracker)        echo "MYTRACKER_DB_USER" ;;
     *)                return 1 ;;
   esac
 }
@@ -311,6 +376,7 @@ get_project_db_url_key() {
     verbose-barnacle) echo "GITHUB_CLEANER_DB_URL" ;;
     dbcleaner)        echo "JDBC_DATABASE_URL" ;;
     sathish-projects-logger) echo "DATABASE_URL" ;;
+    mytracker)        echo "MYTRACKER_DB_URL" ;;
     *)                return 1 ;;
   esac
 }

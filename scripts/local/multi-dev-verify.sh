@@ -27,10 +27,10 @@ RUNS_APP_DIR="$(resolve_project_dir runs-app)"
 CONFIG_SERVER_CONTAINER="$(get_config_server_container)"
 CONFIG_SERVER_ENV="$(get_config_server_env_file)"
 RABBIT_CONTAINER="$(get_rabbitmq_container)"
-INFRA_DIR="$(get_infra_config_dir)"
+LOCAL_ENV_FILE="$(get_local_env_file)"
 
 CLOUD_MODE=false
-if [[ $# -gt 0 && "$1" == "--cloud" ]]; then
+if [[ $# -gt 0 && ( "$1" == "--acg" || "$1" == "--prod" ) ]]; then
   CLOUD_MODE=true
   shift
 fi
@@ -79,7 +79,7 @@ fi
 
 if [ "$CLOUD_MODE" = true ]; then
   print_header "Container health"
-  print_warn "Skipping local container checks in cloud mode"
+  print_warn "Skipping local container checks (--acg/--prod mode)"
 else
   print_header "Container health"
 
@@ -237,13 +237,13 @@ fi
 
 if [ "$CLOUD_MODE" = true ]; then
   print_header "RabbitMQ auth"
-  print_warn "Skipping RabbitMQ auth check in cloud mode"
+  print_warn "Skipping RabbitMQ auth check (--acg/--prod mode)"
 else
   print_header "RabbitMQ auth"
-  rabbit_user=$(grep -E '^RABBITMQ_USERNAME=' "$INFRA_DIR/.env" | tail -n 1 | cut -d'=' -f2- || true)
-  rabbit_pass=$(grep -E '^RABBITMQ_PASSWORD=' "$INFRA_DIR/.env" | tail -n 1 | cut -d'=' -f2- || true)
+  rabbit_user=$(grep -E '^RABBITMQ_USERNAME=' "$LOCAL_ENV_FILE" | tail -n 1 | cut -d'=' -f2- || true)
+  rabbit_pass=$(grep -E '^RABBITMQ_PASSWORD=' "$LOCAL_ENV_FILE" | tail -n 1 | cut -d'=' -f2- || true)
   if [ -z "$rabbit_user" ] || [ -z "$rabbit_pass" ]; then
-    print_error "RABBITMQ_USERNAME/RABBITMQ_PASSWORD missing in $INFRA_DIR/.env"
+    print_error "RABBITMQ_USERNAME/RABBITMQ_PASSWORD missing in $LOCAL_ENV_FILE"
     exit 1
   fi
 

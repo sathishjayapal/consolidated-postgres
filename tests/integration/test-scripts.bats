@@ -41,7 +41,7 @@ SCRIPTS_LOCAL="$REPO_ROOT/scripts/local"
 }
 
 @test "diagnose.sh is executable" {
-  [ -x "$REPO_ROOT/scripts/cloud/diagnose.sh" ]
+  [ -x "$REPO_ROOT/scripts/prod/diagnose.sh" ]
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
