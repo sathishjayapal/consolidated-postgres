@@ -326,9 +326,17 @@ services:
   # Polls every 300 s (5 min). When GitHub Actions pushes a new image,
   # Watchtower detects it and restarts the affected container automatically.
   # No webhook or port-forwarding to VirtualBox needed.
+  #
+  # containrrr/watchtower is archived upstream (frozen at v1.7.1, Nov 2023) —
+  # its bundled Docker client SDK only speaks API 1.25, which breaks against
+  # newer Docker Engine (crash loop: "client version 1.25 is too old").
+  # nickfedor/watchtower is the actively maintained community fork
+  # (github.com/nicholas-fedor/watchtower). Pinned to a specific version
+  # rather than :latest so this doesn't silently go stale again — bump
+  # deliberately by checking https://hub.docker.com/r/nickfedor/watchtower/tags.
 
   watchtower:
-    image: containrrr/watchtower:latest
+    image: nickfedor/watchtower:1.20.3
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
@@ -340,6 +348,24 @@ services:
       # Authenticate to Docker Hub so Watchtower can pull private images
       REPO_USER: travelhelper0h
       REPO_PASS: ${DOCKERHUB_TOKEN}
+    networks:
+      - sathish-net
+
+  # ── cAdvisor — per-container metrics for Prometheus (container-down alerting) ──
+  # Host port 9099, NOT 8080: 8080 is reserved for the runs-app app container
+  # when it's deployed to this VM (see runs-app-db above; only the DB is here today).
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    restart: unless-stopped
+    privileged: true
+    ports:
+      - "9099:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
     networks:
       - sathish-net
 
