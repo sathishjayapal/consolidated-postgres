@@ -354,8 +354,14 @@ services:
   # ── cAdvisor — per-container metrics for Prometheus (container-down alerting) ──
   # Host port 9099, NOT 8080: 8080 is reserved for the runs-app app container
   # when it's deployed to this VM (see runs-app-db above; only the DB is here today).
+  # Image pinned to ghcr.io/google/cadvisor (NOT gcr.io/cadvisor/cadvisor, which
+  # stopped publishing new tags after v0.53.0 — see google/cadvisor#3793) at a
+  # version whose bundled Docker client speaks API >=1.44, required by this VM's
+  # Docker Engine 29.1.3. v0.49.1's client (API 1.41) fails Docker factory
+  # registration entirely, silently degrading to raw-cgroup-only metrics with no
+  # container name/label data — which is what broke the ContainerDown alert.
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    image: ghcr.io/google/cadvisor:0.60.5
     restart: unless-stopped
     privileged: true
     ports:
@@ -366,6 +372,8 @@ services:
       - /sys:/sys:ro
       - /var/lib/docker/:/var/lib/docker:ro
       - /dev/disk/:/dev/disk:ro
+    devices:
+      - /dev/kmsg
     networks:
       - sathish-net
 
