@@ -265,6 +265,10 @@ services:
       # differently-named container env var and the app would still crash.
       EVENT_DOMAIN_USER: ${EVENT_DOMAIN_USER}
       EVENT_DOMAIN_USER_PASSWORD: ${EVENT_DOMAIN_USER_PASSWORD}
+      # Centralized logging service URL — SathishLoggerAppender forwards WARN+ logs here.
+      # Must use the Docker service name (sathishlogger) not localhost, since containers
+      # are on the same sathish-net network and localhost refers to the container itself.
+      SATHISHLOGGER_URL: http://sathishlogger:8080
     depends_on:
       config-server:
         condition: service_healthy
