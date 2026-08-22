@@ -90,6 +90,15 @@ services:
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
 
+  ollama:
+    container_name: ollama
+    image: ollama/ollama:latest
+    command: serve
+    ports:
+      - "11434:11434"
+    environment:
+      - OLLAMA_HOST=0.0.0.0:11434
+
   # Optional — not part of consolidated-postgres's tracked projects (gotoaws-sathish isn't in
   # projects.txt), kept here because it was previously bundled into the same infra file and
   # nothing else currently owns it. `docker compose up` alone will NOT start this.

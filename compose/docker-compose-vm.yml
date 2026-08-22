@@ -140,7 +140,7 @@ services:
     ports:
       - "8432:5432"
     volumes:
-      - pg_data_sathishlogger:/var/lib/postgresql/data
+      - pg_data_sathishlogger:/var/lib/postgresql/datadb
     networks:
       - sathish-net
     healthcheck:
@@ -172,9 +172,18 @@ services:
       interval: 15s
       timeout: 10s
       retries: 5
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    command: serve
+    ports:
+      - "11434:11434"
+    environment:
+      - OLLAMA_HOST=0.0.0.0:11434
+    networks:
+      - sathish-net
 
-  # ── Application Services ────────────────────────────────────────────────────
-
+# ── Application Services ────────────────────────────────────────────────────
   config-server:
     image: travelhelper0h/sathishproject-config-server:latest
     restart: unless-stopped
