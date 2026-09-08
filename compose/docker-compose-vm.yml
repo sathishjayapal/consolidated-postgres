@@ -335,6 +335,77 @@ services:
       retries: 6
       start_period: 60s
 
+  runs-app:
+    image: ghcr.io/dotsky/runs-app:latest
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SERVER_PORT: 8080
+      CONFIG_SERVER_URL: http://config-server:8888
+      SPRING_CLOUD_CONFIG_USERNAME: ${CONFIG_SERVER_USERNAME}
+      SPRING_CLOUD_CONFIG_PASSWORD: ${CONFIG_SERVER_PASSWORD}
+      JDBC_DATABASE_URL: jdbc:postgresql://runs-app-db:5432/${RUNS_APP_DB_NAME:-runsapp_db}
+      JDBC_DATABASE_USERNAME: ${RUNS_APP_DB_USER}
+      JDBC_DATABASE_PASSWORD: ${RUNS_APP_DB_PASSWORD}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS}
+    depends_on:
+      config-server:
+        condition: service_healthy
+      runs-app-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - sathish-net
+    healthcheck:
+      test: [ "CMD", "wget", "-qO-", "http://localhost:8080/actuator/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  runs-ai-analyzer:
+    image: ghcr.io/dotsky/runs-ai-analyzer:latest
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SERVER_PORT: 8081
+      CONFIG_SERVER_URL: http://config-server:8888
+      SPRING_CLOUD_CONFIG_USERNAME: ${CONFIG_SERVER_USERNAME}
+      SPRING_CLOUD_CONFIG_PASSWORD: ${CONFIG_SERVER_PASSWORD}
+      RUNS_AI_ANALYZER_DB_URL: jdbc:postgresql://runs-ai-analyzer-db:5432/${RUNS_AI_ANALYZER_DB_NAME:-runs_ai_analyzer_db}
+      RUNS_AI_ANALYZER_DB_USER: ${RUNS_AI_ANALYZER_DB_USER}
+      RUNS_AI_ANALYZER_DB_PASSWORD: ${RUNS_AI_ANALYZER_DB_PASSWORD}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS}
+      OLLAMA_BASE_URL: http://ollama:11434
+    depends_on:
+      config-server:
+        condition: service_healthy
+      runs-ai-analyzer-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+    networks:
+      - sathish-net
+    healthcheck:
+      test: [ "CMD", "wget", "-qO-", "http://localhost:8081/actuator/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
   # ── Watchtower — auto-redeploy on new Docker Hub :latest ───────────────────
   # Polls every 300 s (5 min). When GitHub Actions pushes a new image,
   # Watchtower detects it and restarts the affected container automatically.
