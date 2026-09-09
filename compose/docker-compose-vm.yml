@@ -172,17 +172,6 @@ services:
       interval: 15s
       timeout: 10s
       retries: 5
-  ollama:
-    image: ollama/ollama:latest
-    restart: unless-stopped
-    command: serve
-    ports:
-      - "11434:11434"
-    environment:
-      - OLLAMA_HOST=0.0.0.0:11434
-    networks:
-      - sathish-net
-
 # ── Application Services ────────────────────────────────────────────────────
   config-server:
     image: travelhelper0h/sathishproject-config-server:latest
@@ -336,7 +325,7 @@ services:
       start_period: 60s
 
   runs-app:
-    image: ghcr.io/dotsky/runs-app:latest
+    image: ghcr.io/sathishjayapal/runs-app:latest
     restart: unless-stopped
     ports:
       - "8080:8080"
@@ -353,6 +342,7 @@ services:
       RABBITMQ_PORT: 5672
       RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER}
       RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS}
+      RUNS_AI_ANALYZER_URL: http://runs-ai-analyzer:8081
       # Google Drive credentials (base64 encoded, decoded on startup)
       GARMIN_DRIVE_SERVICE_ACCOUNT_KEY_BASE64: ${GARMIN_DRIVE_SERVICE_ACCOUNT_KEY_BASE64}
       GARMIN_DRIVE_SERVICE_ACCOUNT_KEY_PATH: ${GARMIN_DRIVE_SERVICE_ACCOUNT_KEY_PATH}
@@ -384,6 +374,7 @@ services:
       APP_INITIALIZATION_USER_PASSWORD: ${APP_INITIALIZATION_USER_PASSWORD}
       APP_INITIALIZATION_SYSTEM_EMAIL: ${APP_INITIALIZATION_SYSTEM_EMAIL}
       APP_INITIALIZATION_SYSTEM_PASSWORD: ${APP_INITIALIZATION_SYSTEM_PASSWORD}
+      BASE_HOST: ${BASE_HOST}
       PRODUCTION: ${PRODUCTION}
       API_PATH: ${API_PATH}
     # Decode base64 credentials and start app
@@ -412,7 +403,7 @@ services:
       start_period: 60s
 
   runs-ai-analyzer:
-    image: ghcr.io/dotsky/runs-ai-analyzer:latest
+    image: ghcr.io/sathishjayapal/runs-ai-analyzer:latest
     restart: unless-stopped
     ports:
       - "8081:8081"
@@ -429,7 +420,8 @@ services:
       RABBITMQ_PORT: 5672
       RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER}
       RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS}
-      OLLAMA_BASE_URL: http://ollama:11434
+      OLLAMA_BASE_URL: http://host.docker.internal:11434  # Changed from http://ollama:11434
+      RUNS_APP_BASE_URL: http://runs-app:8080
     depends_on:
       config-server:
         condition: service_healthy
@@ -437,8 +429,7 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
-      ollama:
-        condition: service_started
+      # Removed: ollama dependency
     networks:
       - sathish-net
     healthcheck:
