@@ -462,13 +462,6 @@ services:
       WATCHTOWER_CLEANUP: "true"
       WATCHTOWER_INCLUDE_STOPPED: "false"
       WATCHTOWER_ROLLING_RESTART: "false"
-      # Authenticate to Docker Hub so Watchtower can pull private images
-      REPO_USER: travelhelper0h
-      REPO_PASS: ${DOCKERHUB_TOKEN}
-      # Authenticate to GitHub Container Registry (GHCR) for runs-app and runs-ai-analyzer
-      # Format: https://username:token@ghcr.io
-      # GHCR_TOKEN should be a GitHub Personal Access Token with `read:packages` scope
-      WATCHTOWER_REGISTRY_AUTH_URL: https://${GHCR_USERNAME:-sathishjayapal}:${GHCR_TOKEN}@ghcr.io
     networks:
       - sathish-net
 
