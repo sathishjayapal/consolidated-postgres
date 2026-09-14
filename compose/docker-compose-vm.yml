@@ -461,7 +461,7 @@ services:
       WATCHTOWER_POLL_INTERVAL: 300
       WATCHTOWER_CLEANUP: "true"
       WATCHTOWER_INCLUDE_STOPPED: "false"
-      WATCHTOWER_ROLLING_RESTART: "true"
+      WATCHTOWER_ROLLING_RESTART: "false"
       # Authenticate to Docker Hub so Watchtower can pull private images
       REPO_USER: travelhelper0h
       REPO_PASS: ${DOCKERHUB_TOKEN}
