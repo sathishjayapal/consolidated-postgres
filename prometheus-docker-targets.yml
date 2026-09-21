@@ -1,0 +1,80 @@
+# Prometheus scrape targets for Portainer-managed Spring Boot services
+# Add these scrape_configs to your existing /etc/prometheus/prometheus.yml on the remote VM
+#
+# All services are reached via localhost since ports are published to the host.
+# Prometheus native on the VM → localhost → published container ports
+
+scrape_configs:
+
+  # ── Spring Boot Apps (actuator/prometheus endpoints) ──────────────────────
+  - job_name: 'config-server'
+    metrics_path: '/sathishconfigserver/prometheus'
+    basic_auth:
+      username: 'cfg_local'
+      password: 'jjK0Xq3liYCfx9JeU1BF7MvEELBl82wP'
+    static_configs:
+      - targets: ['localhost:8888']
+    scrape_interval: 15s
+    scrape_timeout: 10s
+
+  - job_name: 'eventstracker'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['localhost:9081']
+    scrape_interval: 15s
+    scrape_timeout: 10s
+
+  - job_name: 'sathishlogger'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['localhost:8090']
+    scrape_interval: 15s
+    scrape_timeout: 10s
+
+  - job_name: 'dbcleaner'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['localhost:8085']
+    scrape_interval: 15s
+    scrape_timeout: 10s
+
+  - job_name: 'runs-app'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['localhost:8080']
+    scrape_interval: 15s
+    scrape_timeout: 10s
+
+  - job_name: 'runs-ai-analyzer'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['localhost:8081']
+    scrape_interval: 15s
+    scrape_timeout: 10s
+
+  # ── RabbitMQ Management Plugin ──────────────────────────────────────────
+  - job_name: 'rabbitmq'
+    metrics_path: '/api/metrics'
+    basic_auth:
+      username: 'sathish'
+      password: 'jjK0Xq3liYCfx9JeU1BF7MvEELBl82wP'
+    static_configs:
+      - targets: ['localhost:15672']
+    scrape_interval: 30s
+
+  # ── cAdvisor (Docker container metrics) ─────────────────────────────────
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['localhost:9099']
+    scrape_interval: 15s
+
+  # ── PostgreSQL (native, via postgres_exporter on host) ──────────────────
+  # PREREQUISITE: Install postgres_exporter on the VM host
+  #   sudo apt-get install prometheus-postgres-exporter
+  #   sudo systemctl enable prometheus-postgres-exporter
+  #   sudo systemctl start prometheus-postgres-exporter
+  # Default port: 9187
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['localhost:9187']
+    scrape_interval: 30s

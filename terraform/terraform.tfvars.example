@@ -1,0 +1,77 @@
+# Copy this file to terraform.tfvars and fill in real values
+# IMPORTANT: terraform.tfvars is GITIGNORED — never commit secrets here!
+#
+# cp terraform.tfvars.example terraform.tfvars
+# nano terraform.tfvars  (fill in your values)
+
+# Docker host — use unix socket for local VM
+docker_host = "unix:///var/run/docker.sock"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Spring Cloud Config Server
+# ─────────────────────────────────────────────────────────────────────────────
+
+git_uri                    = "https://github.com/sathishjayapal/jubilant-memory"
+encrypt_key                = "YOUR_ENCRYPTION_KEY_HERE"
+config_server_username     = "cfg_local"
+config_server_password     = "YOUR_CONFIG_SERVER_PASSWORD"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# RabbitMQ
+# ─────────────────────────────────────────────────────────────────────────────
+
+rabbitmq_default_user     = "sathish"
+rabbitmq_default_pass     = "YOUR_RABBITMQ_PASSWORD"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# EventTracker Database
+# ─────────────────────────────────────────────────────────────────────────────
+
+events_tracker_db_name     = "event-service"
+events_tracker_db_user     = "events_tracker_db_user"
+events_tracker_db_password = "YOUR_EVENTSTRACKER_DB_PASSWORD"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Runs App Database (native PostgreSQL on 172.17.0.1:5432)
+# ─────────────────────────────────────────────────────────────────────────────
+
+runs_app_db_name           = "runsapp_db"
+runs_app_db_user           = "runsapp_local"
+runs_app_db_password       = "YOUR_RUNS_APP_DB_PASSWORD"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Runs AI Analyzer Database (Docker container with pgvector:pg17)
+# ─────────────────────────────────────────────────────────────────────────────
+
+runs_ai_analyzer_db_name     = "runs_ai_analyzer_db"
+runs_ai_analyzer_db_user     = "runsai_local"
+runs_ai_analyzer_db_password = "YOUR_RUNS_AI_DB_PASSWORD"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DBCleaner Database (native PostgreSQL on 172.17.0.1:5432)
+# ─────────────────────────────────────────────────────────────────────────────
+
+dbcleaner_db_name           = "dbcleaner"
+dbcleaner_db_user           = "dbcleaner_db_user"
+dbcleaner_db_password       = "YOUR_DBCLEANER_DB_PASSWORD"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Sathish Logger Database (native PostgreSQL on 172.17.0.1:5432)
+# ─────────────────────────────────────────────────────────────────────────────
+
+sathishlogger_db_name       = "sathishlogger"
+sathishlogger_db_user       = "sathishlogger_db_user"
+sathishlogger_db_password   = "YOUR_SATHISHLOGGER_DB_PASSWORD"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Event Domain (EventTracker initial user)
+# ─────────────────────────────────────────────────────────────────────────────
+
+event_domain_user          = "eventdomain_local"
+event_domain_user_password = "YOUR_EVENT_DOMAIN_PASSWORD"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Application Settings
+# ─────────────────────────────────────────────────────────────────────────────
+
+production = false

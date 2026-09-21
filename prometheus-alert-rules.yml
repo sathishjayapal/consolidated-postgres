@@ -1,0 +1,132 @@
+# Alert rules for homelab monitoring
+# Copy to /etc/prometheus/alert-rules.yml on the remote VM and reload Prometheus
+
+groups:
+  - name: homelab_docker_alerts
+    interval: 15s
+    rules:
+
+      # ── Container Availability ─────────────────────────────────────────
+      - alert: ContainerDown
+        expr: |
+          up{job=~"config-server|eventstracker|sathishlogger|dbcleaner|runs-app|runs-ai-analyzer|rabbitmq"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.job }} container is down"
+          description: "{{ $labels.job }} has been unreachable for > 2 minutes. Check Portainer."
+
+      # ── JVM Heap Memory ────────────────────────────────────────────────
+      - alert: HighJVMHeapUsage
+        expr: |
+          (jvm_memory_used_bytes{area="heap",job=~"config-server|eventstracker|sathishlogger|dbcleaner|runs-app|runs-ai-analyzer"} /
+           jvm_memory_max_bytes{area="heap",job=~"config-server|eventstracker|sathishlogger|dbcleaner|runs-app|runs-ai-analyzer"}) > 0.85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.job }} JVM heap > 85%"
+          description: "Heap: {{ $value | humanizePercentage }}"
+
+      - alert: CriticalJVMHeapUsage
+        expr: |
+          (jvm_memory_used_bytes{area="heap",job=~"config-server|eventstracker|sathishlogger|dbcleaner|runs-app|runs-ai-analyzer"} /
+           jvm_memory_max_bytes{area="heap",job=~"config-server|eventstracker|sathishlogger|dbcleaner|runs-app|runs-ai-analyzer"}) > 0.95
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.job }} JVM heap > 95% — CRITICAL"
+          description: "Heap: {{ $value | humanizePercentage }} — Consider restart"
+
+      # ── API Latency (HTTP) ─────────────────────────────────────────────
+      - alert: HighAPILatency
+        expr: |
+          histogram_quantile(0.95,
+            rate(http_server_requests_seconds_bucket{job=~"runs-app|runs-ai-analyzer"}[5m])
+          ) > 2
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.job }} p95 latency > 2s"
+          description: "P95: {{ $value | humanizeDuration }}"
+
+      - alert: HighErrorRate
+        expr: |
+          (sum(rate(http_server_requests_seconds_count{status=~"5..",job=~"runs-app|runs-ai-analyzer|eventstracker"}[5m])) by (job) /
+           sum(rate(http_server_requests_seconds_count{job=~"runs-app|runs-ai-analyzer|eventstracker"}[5m])) by (job)) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.job }} error rate > 5%"
+          description: "Error rate: {{ $value | humanizePercentage }}"
+
+      # ── Database Connection Pool ──────────────────────────────────────
+      - alert: HighDBConnections
+        expr: |
+          (hikaricp_connections_active{job=~"runs-app|runs-ai-analyzer|eventstracker|sathishlogger|dbcleaner"} /
+           hikaricp_connections_max{job=~"runs-app|runs-ai-analyzer|eventstracker|sathishlogger|dbcleaner"}) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.job }} DB pool > 80%"
+          description: "Active: {{ $value | humanizePercentage }} of max"
+
+      - alert: DBConnectionPoolExhausted
+        expr: |
+          (hikaricp_connections_active{job=~"runs-app|runs-ai-analyzer|eventstracker|sathishlogger|dbcleaner"} /
+           hikaricp_connections_max{job=~"runs-app|runs-ai-analyzer|eventstracker|sathishlogger|dbcleaner"}) > 0.95
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.job }} DB pool nearly exhausted"
+          description: "Active: {{ $value | humanizePercentage }} of max — connections blocked"
+
+      # ── Database Query Performance ─────────────────────────────────────
+      - alert: SlowPostgreSQLQueries
+        expr: |
+          pg_stat_statements_mean_exec_time_seconds > 5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Slow PostgreSQL query detected (mean > 5s)"
+          description: "Mean query time: {{ $value | humanizeDuration }}"
+
+      # ── RabbitMQ Queue Backlog ────────────────────────────────────────
+      - alert: RabbitMQQueueBacklog
+        expr: |
+          rabbitmq_queue_messages_ready > 1000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "RabbitMQ queue {{ $labels.queue }} backlog"
+          description: "{{ $value }} messages ready in {{ $labels.queue }}"
+
+      # ── Container Memory ──────────────────────────────────────────────
+      - alert: ContainerHighMemory
+        expr: |
+          (container_memory_usage_bytes{name=~"sathish-stack-.*"} / (1024 * 1024 * 1024)) > 1.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.name }} memory > 1.5 GB"
+          description: "Memory: {{ $value | humanize1024 }} GB"
+
+      # ── Container CPU ─────────────────────────────────────────────────
+      - alert: ContainerHighCPU
+        expr: |
+          rate(container_cpu_usage_seconds_total{name=~"sathish-stack-.*"}[5m]) > 0.8
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.name }} CPU > 80%"
+          description: "CPU: {{ $value | humanizePercentage }}"
