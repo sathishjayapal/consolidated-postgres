@@ -42,28 +42,7 @@ services:
   # >>> PROJECT-DBS:START — generated, do not edit by hand
   # NOTE: Most project DBs using native PostgreSQL on host (172.17.0.1:5432)
   # Exception: runs-ai-analyzer-db (Docker with pgvector) — extension easier in container
-  diagram-maker:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: ghcr.io/diagram-maker:latest
-    container_name: diagram-maker
-    ports:
-      - "8091:8091"
-    environment:
-      - SPRING_PROFILES_ACTIVE=prod
-      - SERVER_PORT=8091
-    volumes:
-      - diagram-maker-uploads:/app/uploads
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8091/actuator/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
-    restart: unless-stopped
-    networks:
-      - sathish-net
+  # ── Application Services ──
 
   runs-ai-analyzer-db:
     image: pgvector/pgvector:pg17
@@ -250,7 +229,23 @@ services:
       timeout: 5s
       retries: 6
       start_period: 60s
-
+  diagram-maker:
+    image: ghcr.io/sathishjayapal/diagram-maker:latest
+    restart: unless-stopped
+    ports:
+      - "8091:8091"
+    environment:
+      SERVER_PORT: 8091
+      DIAGRAM_OUTPUT_DIR: /app/diagrams
+      RUNSAIANALYZER_BASEURL: http://runs-ai-analyzer:8081
+    networks:
+      - sathish-net
+    healthcheck:
+      test: [ "CMD", "wget", "-qO-", "http://localhost:8091/actuator/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
   runs-app:
     image: ghcr.io/sathishjayapal/runs-app:latest
     restart: unless-stopped
