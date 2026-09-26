@@ -1,3 +1,5 @@
+version: "3.9"
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Sathish Stack — VirtualBox / Portainer
 #
@@ -40,6 +42,28 @@ services:
   # >>> PROJECT-DBS:START — generated, do not edit by hand
   # NOTE: Most project DBs using native PostgreSQL on host (172.17.0.1:5432)
   # Exception: runs-ai-analyzer-db (Docker with pgvector) — extension easier in container
+  diagram-maker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ghcr.io/diagram-maker:latest
+    container_name: diagram-maker
+    ports:
+      - "8091:8091"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SERVER_PORT=8091
+    volumes:
+      - diagram-maker-uploads:/app/uploads
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8091/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - sathish-net
 
   runs-ai-analyzer-db:
     image: pgvector/pgvector:pg17
@@ -306,6 +330,8 @@ services:
   runs-ai-analyzer:
     image: ghcr.io/sathishjayapal/runs-ai-analyzer:latest
     restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "8081:8081"
     environment:
@@ -317,11 +343,16 @@ services:
       RUNS_AI_ANALYZER_DB_URL: jdbc:postgresql://runs-ai-analyzer-db:5432/${RUNS_AI_ANALYZER_DB_NAME:-runs_ai_analyzer_db}
       RUNS_AI_ANALYZER_DB_USER: ${RUNS_AI_ANALYZER_DB_USER}
       RUNS_AI_ANALYZER_DB_PASSWORD: ${RUNS_AI_ANALYZER_DB_PASSWORD}
+      OLLAMA_CHAT_MODEL: ${OLLAMA_CHAT_MODEL}
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: 5672
       RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER}
       RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS}
-      OLLAMA_BASE_URL: http://host.docker.internal:11434  # Changed from http://ollama:11434
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      # AI failover (Anthropic -> ACG Ollama -> OLLAMA_BASE_URL). Unset = tier skipped.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ACG_OLLAMA_BASE_URL: ${ACG_OLLAMA_BASE_URL:-}
+      ACG_OLLAMA_CHAT_MODEL: ${ACG_OLLAMA_CHAT_MODEL:-}
       RUNS_APP_BASE_URL: http://runs-app:8080
     depends_on:
       config-server:
