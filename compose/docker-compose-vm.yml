@@ -237,7 +237,9 @@ services:
     environment:
       SERVER_PORT: 8091
       DIAGRAM_OUTPUT_DIR: /app/diagrams
-      RUNSAIANALYZER_BASEURL: http://runs-ai-analyzer:8081
+      RUNS_AI_ANALYZER_BASE_URL: http://runs-ai-analyzer:8081
+    volumes:
+      - diagram_maker_data:/app/diagrams
     networks:
       - sathish-net
     healthcheck:
@@ -349,6 +351,8 @@ services:
       ACG_OLLAMA_BASE_URL: ${ACG_OLLAMA_BASE_URL:-}
       ACG_OLLAMA_CHAT_MODEL: ${ACG_OLLAMA_CHAT_MODEL:-}
       RUNS_APP_BASE_URL: http://runs-app:8080
+      DIAGRAM_MAKER_BASE_URL: http://diagram-maker:8091
+      DIAGRAM_MAKER_MCP_ENABLED: "true"
     depends_on:
       config-server:
         condition: service_healthy
@@ -356,7 +360,8 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
-      # Removed: ollama dependency
+      diagram-maker:
+        condition: service_healthy
     networks:
       - sathish-net
     healthcheck:
@@ -427,6 +432,7 @@ volumes:
   # >>> PROJECT-DB-VOLUMES:END
   rabbitmq_data:
   logger_data:
+  diagram_maker_data:
 
 networks:
   sathish-net:
