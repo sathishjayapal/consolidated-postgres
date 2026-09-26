@@ -20,7 +20,7 @@ name: sathish-project-infra
 services:
   postgres:
     container_name: event-service-db
-    image: postgres:17.5
+    image: postgres:16.15
     environment:
       - POSTGRES_DB=${EVENTS_TRACKER_DB_NAME:-event-service}
       - POSTGRES_USER=${EVENTS_TRACKER_DB_USER:?set in env/.env.local}
@@ -29,10 +29,15 @@ services:
       - 6433:5432
     volumes:
       - event_service_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${EVENTS_TRACKER_DB_USER} -d ${EVENTS_TRACKER_DB_NAME:-event-service}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   runs-app-db:
     container_name: runs-app-postgres
-    image: postgres:18.1
+    image: postgres:16.15
     profiles:
       - runs-app
     environment:
@@ -43,7 +48,12 @@ services:
       - "5443:5432"
     volumes:
       # matches the pre-existing volume from runs-app's own (now-removed) docker-compose.yml
-      - postgres-data:/var/lib/postgresql
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${RUNS_APP_DB_USER} -d ${RUNS_APP_DB_NAME:-runsapp_db}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   runs-ai-analyzer-db:
     container_name: runs-ai-analyzer-db
@@ -58,10 +68,15 @@ services:
       - "5444:5432"
     volumes:
       - runs_ai_shared_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${RUNS_AI_ANALYZER_DB_USER} -d ${RUNS_AI_ANALYZER_DB_NAME:-runs_ai_analyzer_db}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   mytracker-db:
     container_name: mytracker-db
-    image: postgres:17
+    image: postgres:16.15
     profiles:
       - mytracker
     environment:
@@ -72,10 +87,15 @@ services:
       - "5440:5432"
     volumes:
       - mytracker_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${MYTRACKER_DB_USER} -d ${MYTRACKER_DB_NAME:-postgres}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   rabbitmq:
     container_name: sathishproject-rabbitmq
-    image: rabbitmq:4.1-management-alpine
+    image: rabbitmq:3-management-alpine
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:-guest}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
@@ -83,10 +103,10 @@ services:
       - "5672:5672"
       - "15672:15672"
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
-      interval: 10s
-      timeout: 5s
-      retries: 12
+      test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
+      interval: 15s
+      timeout: 10s
+      retries: 5
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
 

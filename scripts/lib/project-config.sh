@@ -263,16 +263,17 @@ get_project_env_file() {
 # VM (VirtualBox / Portainer) stack metadata — used by scripts/vm/vm-db-up.sh
 # ─────────────────────────────────────────────────────────────────────────────
 
-# Postgres image on the VM — mirrors each project's own docker-compose.
+# Postgres image — matches the VM's native PostgreSQL 16.15 (pgvector stays pg17, the
+# container actually running on the VM). Each project's own docker-compose mirrors this.
 get_project_db_image() {
   case "$1" in
-    eventstracker)    echo "postgres:17.5" ;;
-    runs-app)         echo "postgres:18.1" ;;
+    eventstracker)    echo "postgres:16.15" ;;
+    runs-app)         echo "postgres:16.15" ;;
     runs-ai-analyzer) echo "pgvector/pgvector:pg17" ;;
-    verbose-barnacle) echo "postgres:17.5" ;;
-    dbcleaner)        echo "postgres:18.3" ;;
-    sathish-projects-logger) echo "postgres:15-alpine" ;;  # matches project's own local compose
-    mytracker)        echo "postgres:17" ;;
+    verbose-barnacle) echo "postgres:16.15" ;;
+    dbcleaner)        echo "postgres:16.15" ;;
+    sathish-projects-logger) echo "postgres:16.15" ;;
+    mytracker)        echo "postgres:16.15" ;;
     *)                return 1 ;;
   esac
 }
@@ -280,8 +281,7 @@ get_project_db_image() {
 # Data directory to mount the named volume at (postgres:18+ moved it up a level).
 get_project_pg_mount() {
   case "$1" in
-    runs-app|dbcleaner) echo "/var/lib/postgresql" ;;        # postgres 18+
-    eventstracker|runs-ai-analyzer|verbose-barnacle|sathish-projects-logger|mytracker) echo "/var/lib/postgresql/data" ;;
+    eventstracker|runs-app|runs-ai-analyzer|verbose-barnacle|dbcleaner|sathish-projects-logger|mytracker) echo "/var/lib/postgresql/data" ;;
     *)                return 1 ;;
   esac
 }
