@@ -112,7 +112,7 @@ groups:
       # ── Container Memory ──────────────────────────────────────────────
       - alert: ContainerHighMemory
         expr: |
-          (container_memory_usage_bytes{name=~"sathish-stack-.*"} / (1024 * 1024 * 1024)) > 1.5
+          (container_memory_usage_bytes{container_label_com_docker_compose_project="sathish-stack"} / (1024 * 1024 * 1024)) > 1.5
         for: 5m
         labels:
           severity: warning
@@ -123,7 +123,7 @@ groups:
       # ── Container CPU ─────────────────────────────────────────────────
       - alert: ContainerHighCPU
         expr: |
-          rate(container_cpu_usage_seconds_total{name=~"sathish-stack-.*"}[5m]) > 0.8
+          rate(container_cpu_usage_seconds_total{container_label_com_docker_compose_project="sathish-stack"}[5m]) > 0.8
         for: 10m
         labels:
           severity: warning

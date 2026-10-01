@@ -53,7 +53,7 @@ resource "docker_image" "pgvector" {
 }
 
 resource "docker_container" "runs_ai_analyzer_db" {
-  name    = "sathish-stack-runs-ai-analyzer-db-1"
+  name    = "runs-ai-analyzer-db"
   image   = docker_image.pgvector.image_id
   restart = "unless-stopped"
 
@@ -99,7 +99,7 @@ resource "docker_image" "rabbitmq" {
 }
 
 resource "docker_container" "rabbitmq" {
-  name    = "sathish-stack-rabbitmq-1"
+  name    = "rabbitmq"
   image   = docker_image.rabbitmq.image_id
   restart = "unless-stopped"
 
@@ -149,7 +149,7 @@ resource "docker_image" "config_server" {
 }
 
 resource "docker_container" "config_server" {
-  name    = "sathish-stack-config-server-1"
+  name    = "config-server"
   image   = docker_image.config_server.image_id
   restart = "unless-stopped"
 
@@ -196,7 +196,7 @@ resource "docker_image" "sathishlogger" {
 }
 
 resource "docker_container" "sathishlogger" {
-  name    = "sathish-stack-sathishlogger-1"
+  name    = "sathishlogger"
   image   = docker_image.sathishlogger.image_id
   restart = "unless-stopped"
 
@@ -243,7 +243,7 @@ resource "docker_image" "eventstracker" {
 }
 
 resource "docker_container" "eventstracker" {
-  name    = "sathish-stack-eventstracker-1"
+  name    = "eventstracker"
   image   = docker_image.eventstracker.image_id
   restart = "unless-stopped"
 
@@ -295,7 +295,7 @@ resource "docker_image" "dbcleaner" {
 }
 
 resource "docker_container" "dbcleaner" {
-  name    = "sathish-stack-dbcleaner-1"
+  name    = "dbcleaner"
   image   = docker_image.dbcleaner.image_id
   restart = "unless-stopped"
 
@@ -350,7 +350,7 @@ resource "docker_image" "runs_app" {
 }
 
 resource "docker_container" "runs_app" {
-  name    = "sathish-stack-runs-app-1"
+  name    = "runs-app"
   image   = docker_image.runs_app.image_id
   restart = "unless-stopped"
 
@@ -402,7 +402,7 @@ resource "docker_image" "runs_ai_analyzer" {
 }
 
 resource "docker_container" "runs_ai_analyzer" {
-  name    = "sathish-stack-runs-ai-analyzer-1"
+  name    = "runs-ai-analyzer"
   image   = docker_image.runs_ai_analyzer.image_id
   restart = "unless-stopped"
 
@@ -454,7 +454,7 @@ resource "docker_image" "watchtower" {
 }
 
 resource "docker_container" "watchtower" {
-  name    = "sathish-stack-watchtower-1"
+  name    = "watchtower"
   image   = docker_image.watchtower.image_id
   restart = "unless-stopped"
 
@@ -488,7 +488,7 @@ resource "docker_image" "cadvisor" {
 }
 
 resource "docker_container" "cadvisor" {
-  name      = "sathish-stack-cadvisor-1"
+  name      = "cadvisor"
   image     = docker_image.cadvisor.image_id
   restart   = "unless-stopped"
   privileged = true

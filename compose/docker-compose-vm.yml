@@ -46,6 +46,7 @@ services:
 
   runs-ai-analyzer-db:
     image: pgvector/pgvector:pg17
+    container_name: runs-ai-analyzer-db
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${RUNS_AI_ANALYZER_DB_NAME:-runs_ai_analyzer_db}
@@ -70,6 +71,7 @@ services:
 
   rabbitmq:
     image: rabbitmq:3-management-alpine
+    container_name: rabbitmq
     restart: unless-stopped
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
@@ -89,6 +91,7 @@ services:
 # ── Application Services ────────────────────────────────────────────────────
   config-server:
     image: travelhelper0h/sathishproject-config-server:latest
+    container_name: config-server
     restart: unless-stopped
     ports:
       - "8888:8888"
@@ -116,6 +119,7 @@ services:
 
   sathishlogger:
     image: travelhelper0h/sathishlogger:latest
+    container_name: sathishlogger
     restart: unless-stopped
     ports:
       - "8090:8080"     # host 8090 → container 8080 (avoids conflict with other services)
@@ -142,6 +146,7 @@ services:
 
   eventstracker:
     image: travelhelper0h/eventstracker:latest
+    container_name: eventstracker
     restart: unless-stopped
     ports:
       - "9081:9081"
@@ -189,6 +194,7 @@ services:
 
   dbcleaner:
     image: travelhelper0h/dbcleaner:latest
+    container_name: dbcleaner
     restart: unless-stopped
     ports:
       - "8085:8085"
@@ -231,6 +237,7 @@ services:
       start_period: 60s
   diagram-maker:
     image: ghcr.io/sathishjayapal/diagram-maker:latest
+    container_name: diagram-maker
     restart: unless-stopped
     ports:
       - "8091:8091"
@@ -250,6 +257,7 @@ services:
       start_period: 60s
   runs-app:
     image: ghcr.io/sathishjayapal/runs-app:latest
+    container_name: runs-app
     restart: unless-stopped
     ports:
       - "8080:8080"
@@ -326,6 +334,7 @@ services:
 
   runs-ai-analyzer:
     image: ghcr.io/sathishjayapal/runs-ai-analyzer:latest
+    container_name: runs-ai-analyzer
     restart: unless-stopped
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -386,6 +395,7 @@ services:
 
   watchtower:
     image: nickfedor/watchtower:1.20.3
+    container_name: watchtower
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
@@ -408,6 +418,7 @@ services:
   # container name/label data — which is what broke the ContainerDown alert.
   cadvisor:
     image: ghcr.io/google/cadvisor:0.60.5
+    container_name: cadvisor
     restart: unless-stopped
     privileged: true
     ports:

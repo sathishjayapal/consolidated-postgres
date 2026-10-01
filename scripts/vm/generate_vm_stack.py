@@ -38,6 +38,7 @@ VOL_END = "# >>> PROJECT-DB-VOLUMES:END"
 SERVICE_TEMPLATE = """\
   {service}:
     image: {image}
+    container_name: {service}
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${{{name_key}:-{db_name}}}
