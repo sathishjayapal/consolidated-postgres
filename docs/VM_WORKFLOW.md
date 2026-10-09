@@ -76,6 +76,33 @@ Connect from the Mac: `psql -h <VM_IP> -p <port> -U <user> -d <database>`
 | Selected project's `docker-compose.yml` (eventstracker → `jubilant-memory/config/`) | Host-port mapping kept in sync with `project-config.sh`                                                                               |
 | Selected project's `.env`                                                           | The JDBC URL key is rewritten to `jdbc:postgresql://<VM_IP or localhost>:<port>/<db>`; a `.env.bak` backup is made first              |
 
+## Schema-only sync (VM -> local, no data)
+
+To make your local Docker DB's tables match the VM without copying any real
+rows down (and without ever writing back to the VM):
+
+```bash
+./scripts/local/sync-schema-from-vm.sh runs-app runs-ai-analyzer
+./scripts/local/sync-schema-from-vm.sh --dry-run runs-app   # preview only
+```
+
+What it does, per project:
+1. `pg_dump --schema-only` straight from the VM over the network (read-only —
+   never writes to the VM). Uses the same DB user/password already in that
+   project's local `.env` (works as long as VM and local haven't drifted —
+   check with `scripts/vm/check-stack-consistency.sh --roles` if it fails).
+2. Drops and recreates the project's **local** DB, then applies the dumped
+   schema — including `flyway_schema_history`, so Flyway sees the same
+   migration state and won't try to re-run anything on next app start.
+3. Refuses to run if the project's local `.env` isn't currently pointed at
+   `localhost` (e.g. left in `--target vm`/`--acg`/`--prod` mode), so it can
+   never recreate the wrong database.
+
+Local data you had before the sync is gone after this — it's meant for
+"make my tables match," not for preserving local test data. If you need
+actual rows from the VM, that's a separate, not-yet-built pull (ask before
+assuming it works the same way).
+
 ## Notes & gotchas
 
 - **eventstracker DB service is named `postgres`** in the VM stack — the eventstracker app container there resolves its
