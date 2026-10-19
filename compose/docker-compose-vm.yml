@@ -145,7 +145,9 @@ services:
       - sathish-net
 
   eventstracker:
-    image: travelhelper0h/eventstracker:latest
+    # GHCR (was travelhelper0h/eventstracker on Docker Hub). The package must be public: this VM
+    # has no registry credentials, same as the runs-app / runs-ai-analyzer GHCR images.
+    image: ghcr.io/sathishjayapal/eventstracker:latest
     container_name: eventstracker
     restart: unless-stopped
     ports:
@@ -180,10 +182,10 @@ services:
       # differently-named container env var and the app would still crash.
       EVENT_DOMAIN_USER: ${EVENT_DOMAIN_USER}
       EVENT_DOMAIN_USER_PASSWORD: ${EVENT_DOMAIN_USER_PASSWORD}
-      # Centralized logging service URL — SathishLoggerAppender forwards WARN+ logs here.
-      # Must use the Docker service name (sathishlogger) not localhost, since containers
-      # are on the same sathish-net network and localhost refers to the container itself.
-      SATHISHLOGGER_URL: http://sathishlogger:8080
+      # Structured JSON logs on stdout (one ECS object per line, correlationId as a field).
+      # Alloy collects them into Loki; see compose/docker-compose-observability.yml. The
+      # SathishLoggerAppender / SATHISHLOGGER_URL are gone from eventstracker.
+      LOGGING_STRUCTURED_FORMAT_CONSOLE: ecs
     depends_on:
       config-server:
         condition: service_healthy
