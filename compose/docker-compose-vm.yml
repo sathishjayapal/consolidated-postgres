@@ -305,6 +305,54 @@ services:
       retries: 3
       start_period: 60s
 
+  github-cleaner:
+    image: ghcr.io/sathishjayapal/verbose-barnacle:latest
+    restart: unless-stopped
+    ports:
+      - "7080:7080"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SERVER_PORT: 7080
+      CONFIG_SERVER_URL: http://config-server:8888
+      SPRING_CLOUD_CONFIG_USERNAME: ${CONFIG_SERVER_USERNAME}
+      SPRING_CLOUD_CONFIG_PASSWORD: ${CONFIG_SERVER_PASSWORD}
+      # github-cleaner-db is generated in the PROJECT-DBS section (host port 5439)
+      GITHUB_CLEANER_DB_URL: jdbc:postgresql://github-cleaner-db:5432/${GITHUB_CLEANER_DB_NAME:-my-github-cleaner}
+      GITHUB_CLEANER_DB_USER: ${GITHUB_CLEANER_DB_USER}
+      GITHUB_CLEANER_DB_PASSWORD: ${GITHUB_CLEANER_DB_PASSWORD}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS}
+      # App users (basic auth / session login)
+      APP_SECURITY_ADMIN_USERNAME: ${APP_SECURITY_ADMIN_USERNAME}
+      APP_SECURITY_ADMIN_PASSWORD: ${APP_SECURITY_ADMIN_PASSWORD}
+      APP_SECURITY_VIEWER_USERNAME: ${APP_SECURITY_VIEWER_USERNAME}
+      APP_SECURITY_VIEWER_PASSWORD: ${APP_SECURITY_VIEWER_PASSWORD}
+      # GitHub API
+      GITHUB_TOKEN: ${GITHUB_TOKEN}
+      githubusername: ${GITHUB_USERNAME}
+      githuborgkey: ${GITHUB_ORG_KEY}
+      # EventTracker integration (raw env names the code expects)
+      EVENTSTRACKER_URL: http://eventstracker:8085
+      eventstracker_username: ${EVENTSTRACKER_USERNAME}
+      eventstracker_password: ${EVENTSTRACKER_PASSWORD}
+    depends_on:
+      config-server:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      eventstracker:
+        condition: service_healthy
+    networks:
+      - sathish-net
+    healthcheck:
+      test: [ "CMD", "wget", "-qO-", "http://localhost:7080/actuator/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+
   runs-ai-analyzer:
     image: ghcr.io/sathishjayapal/runs-ai-analyzer:latest
     restart: unless-stopped
