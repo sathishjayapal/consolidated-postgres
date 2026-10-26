@@ -329,11 +329,12 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: prod
       SERVER_PORT: 7080
+
       CONFIG_SERVER_URL: http://config-server:8888
       SPRING_CLOUD_CONFIG_USERNAME: ${CONFIG_SERVER_USERNAME}
       SPRING_CLOUD_CONFIG_PASSWORD: ${CONFIG_SERVER_PASSWORD}
       # github-cleaner-db is generated in the PROJECT-DBS section (host port 5439)
-      GITHUB_CLEANER_DB_URL: jdbc:postgresql://github-cleaner-db:5432/${GITHUB_CLEANER_DB_NAME:-my-github-cleaner}
+      GITHUB_CLEANER_DB_URL: jdbc:postgresql://172.17.0.1:5432/${GITHUB_CLEANER_DB_NAME:-my-github-cleaner}
       GITHUB_CLEANER_DB_USER: ${GITHUB_CLEANER_DB_USER}
       GITHUB_CLEANER_DB_PASSWORD: ${GITHUB_CLEANER_DB_PASSWORD}
       RABBITMQ_HOST: rabbitmq
