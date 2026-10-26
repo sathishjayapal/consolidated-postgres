@@ -37,6 +37,7 @@ VOL_END = "# >>> PROJECT-DB-VOLUMES:END"
 
 SERVICE_TEMPLATE = """\
   {service}:
+    container_name: sathish-stack-{service}
     image: {image}
     restart: unless-stopped
     environment:
