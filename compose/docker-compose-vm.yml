@@ -237,6 +237,8 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: prod
       SERVER_PORT: 8080
+      # Emit JSON logs with correlationId field (runs-app PR #47)
+      LOGGING_STRUCTURED_FORMAT_CONSOLE: ecs
       CONFIG_SERVER_URL: http://config-server:8888
       SPRING_CLOUD_CONFIG_USERNAME: ${CONFIG_SERVER_USERNAME}
       SPRING_CLOUD_CONFIG_PASSWORD: ${CONFIG_SERVER_PASSWORD}
