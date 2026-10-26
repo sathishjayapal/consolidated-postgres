@@ -351,7 +351,7 @@ services:
       githubusername: ${GITHUB_USERNAME}
       githuborgkey: ${GITHUB_ORG_KEY}
       # EventTracker integration (raw env names the code expects)
-      EVENTSTRACKER_URL: http://eventstracker:8085
+      EVENTSTRACKER_URL: http://eventstracker:9081
       eventstracker_username: ${EVENTSTRACKER_USERNAME}
       eventstracker_password: ${EVENTSTRACKER_PASSWORD}
     depends_on:
