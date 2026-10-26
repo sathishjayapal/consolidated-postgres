@@ -1,0 +1,3910 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_PROMETHEUS",
+      "label": "Local runs-server Prometheus",
+      "description": "Select the Prometheus data source for runs-server (9090).",
+      "type": "datasource",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus"
+    }
+  ],
+  "__requires": [
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "10.0.0"
+    },
+    {
+      "type": "datasource",
+      "id": "prometheus",
+      "name": "Prometheus",
+      "version": "1.0.0"
+    },
+    {
+      "type": "panel",
+      "id": "stat",
+      "name": "stat",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "timeseries",
+      "name": "timeseries",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "bargauge",
+      "name": "bargauge",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "text",
+      "name": "text",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "row",
+      "name": "row",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "table",
+      "name": "Table",
+      "version": ""
+    }
+  ],
+  "id": null,
+  "uid": null,
+  "title": "Runs Server \u00b7 Attention First",
+  "description": "Attention-first overview using current threshold findings and missing-data checks. Rule-based priority sorting; no notification rules are provisioned.",
+  "tags": [
+    "runs-server",
+    "home-server",
+    "postgresql",
+    "applications",
+    "attention-first"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 3,
+  "editable": true,
+  "graphTooltip": 1,
+  "refresh": "30s",
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "15s",
+      "30s",
+      "1m",
+      "5m"
+    ]
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "host",
+        "label": "Hosts",
+        "type": "custom",
+        "query": "runs-server,mac13-server",
+        "hide": 0,
+        "multi": true,
+        "includeAll": true,
+        "allValue": "runs-server|mac13-server",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "options": [
+          {
+            "text": "All",
+            "value": "$__all",
+            "selected": true
+          },
+          {
+            "text": "runs-server",
+            "value": "runs-server",
+            "selected": false
+          },
+          {
+            "text": "mac13-server",
+            "value": "mac13-server",
+            "selected": false
+          }
+        ]
+      },
+      {
+        "name": "database",
+        "label": "Databases",
+        "type": "custom",
+        "query": "dbcleaner,event-service,litellm,my-github-cleaner,runsapp_db,sathishlogger,runs_ai_analyzer_db",
+        "hide": 0,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".+",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "options": [
+          {
+            "text": "All",
+            "value": "$__all",
+            "selected": true
+          },
+          {
+            "text": "dbcleaner",
+            "value": "dbcleaner",
+            "selected": false
+          },
+          {
+            "text": "event-service",
+            "value": "event-service",
+            "selected": false
+          },
+          {
+            "text": "litellm",
+            "value": "litellm",
+            "selected": false
+          },
+          {
+            "text": "my-github-cleaner",
+            "value": "my-github-cleaner",
+            "selected": false
+          },
+          {
+            "text": "runsapp_db",
+            "value": "runsapp_db",
+            "selected": false
+          },
+          {
+            "text": "sathishlogger",
+            "value": "sathishlogger",
+            "selected": false
+          },
+          {
+            "text": "runs_ai_analyzer_db",
+            "value": "runs_ai_analyzer_db",
+            "selected": false
+          }
+        ]
+      }
+    ]
+  },
+  "annotations": {
+    "list": []
+  },
+  "links": [],
+  "panels": [
+    {
+      "id": 37,
+      "title": "0 \u00b7 Attention first",
+      "type": "row",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 38,
+      "title": "Critical",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "count(((label_replace(label_replace((max by(target) (label_join((3 * (max_over_time(up[2m]) == bool 0)), \"target\", \" / \", \"job\", \"instance\"))), \"Check\", \"Scrape unavailable\", \"\", \"\"), \"Action\", \"Inspect target and service logs; no successful scrape in the last 2 minutes\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_replace((3 * (max_over_time(probe_success{job=\"blackbox-health\"}[2m]) == bool 0)), \"target\", \"$1\", \"app\", \"(.*)\"))), \"Check\", \"Application probe failed\", \"\", \"\"), \"Action\", \"Inspect the endpoint and application logs; no passing result in the last 2 minutes\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_replace((2 * ((label_replace(vector(1), \"app\", \"nextcloud\", \"\", \"\") or label_replace(vector(1), \"app\", \"immich\", \"\", \"\") or label_replace(vector(1), \"app\", \"runs-app\", \"\", \"\") or label_replace(vector(1), \"app\", \"runs-ai-analyzer\", \"\", \"\") or label_replace(vector(1), \"app\", \"eventstracker\", \"\", \"\") or label_replace(vector(1), \"app\", \"sathishlogger\", \"\", \"\")) unless on(app) (probe_success{job=\"blackbox-health\"} and on(job,instance) (up{job=\"blackbox-health\"} == 1)))), \"target\", \"$1\", \"app\", \"(.*)\"))), \"Check\", \"Missing application result\", \"\", \"\"), \"Action\", \"Check Blackbox target and collection; missing data is not proof the application is down\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_replace((3 * (max_over_time(pg_up{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\"}[2m]) == bool 0)), \"target\", \"$1\", \"instance\", \"(.*)\"))), \"Check\", \"PostgreSQL connection failed\", \"\", \"\"), \"Action\", \"Inspect database reachability and exporter credentials; exporter reports connection failure\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_replace((2 * ((label_replace(vector(1), \"instance\", \"runsapp-db\", \"\", \"\") or label_replace(vector(1), \"instance\", \"runs-ai-analyzer-db\", \"\", \"\")) unless on(instance) (pg_up{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\"} and on(job,instance) (up{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\"} == 1)))), \"target\", \"$1\", \"instance\", \"(.*)\"))), \"Check\", \"Missing database connection result\", \"\", \"\"), \"Action\", \"Check exporter collection before interpreting database health\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_replace((((max by(job) (100 * (1 - node_filesystem_avail_bytes{job=~\"runs-server|mac13-server\",mountpoint=\"/\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs\"} / node_filesystem_size_bytes{job=~\"runs-server|mac13-server\",mountpoint=\"/\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs\"}))) >= bool 70) + ((max by(job) (100 * (1 - node_filesystem_avail_bytes{job=~\"runs-server|mac13-server\",mountpoint=\"/\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs\"} / node_filesystem_size_bytes{job=~\"runs-server|mac13-server\",mountpoint=\"/\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs\"}))) >= bool 80) + ((max by(job) (100 * (1 - node_filesystem_avail_bytes{job=~\"runs-server|mac13-server\",mountpoint=\"/\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs\"} / node_filesystem_size_bytes{job=~\"runs-server|mac13-server\",mountpoint=\"/\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs\"}))) >= bool 90)), \"target\", \"$1\", \"job\", \"(.*)\"))), \"Check\", \"Root disk capacity\", \"\", \"\"), \"Action\", \"Review at 70 percent; warning at 80; critical at 90; inspect largest folders and retention\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_replace((2 * ((100 * (1 - avg by(job) (rate(node_cpu_seconds_total{job=~\"runs-server|mac13-server\",mode=\"idle\"}[10m])))) >= bool 80) + ((100 * (1 - avg by(job) (rate(node_cpu_seconds_total{job=~\"runs-server|mac13-server\",mode=\"idle\"}[10m])))) >= bool 95)), \"target\", \"$1\", \"job\", \"(.*)\"))), \"Check\", \"CPU pressure\", \"\", \"\"), \"Action\", \"10-minute average: warning at 80 percent; critical at 95; identify the busiest process\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_replace((2 * ((max by(job) (100 * (1 - node_memory_MemAvailable_bytes{job=~\"runs-server|mac13-server\"} / node_memory_MemTotal_bytes{job=~\"runs-server|mac13-server\"}))) >= bool 85) + ((max by(job) (100 * (1 - node_memory_MemAvailable_bytes{job=~\"runs-server|mac13-server\"} / node_memory_MemTotal_bytes{job=~\"runs-server|mac13-server\"}))) >= bool 95)), \"target\", \"$1\", \"job\", \"(.*)\"))), \"Check\", \"Memory pressure\", \"\", \"\"), \"Action\", \"Warning at 85 percent used; critical at 95; inspect consumers and available memory\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_join(((((100 * (sum by(instance,datname) (rate(pg_stat_database_xact_rollback{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\",datname!~\"postgres|template0|template1|\"}[10m]))) / clamp_min(((sum by(instance,datname) (rate(pg_stat_database_xact_rollback{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\",datname!~\"postgres|template0|template1|\"}[10m]))) + (sum by(instance,datname) (rate(pg_stat_database_xact_commit{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\",datname!~\"postgres|template0|template1|\"}[10m])))), 0.000001))) >= bool 10) * (((sum by(instance,datname) (rate(pg_stat_database_xact_rollback{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\",datname!~\"postgres|template0|template1|\"}[10m]))) + (sum by(instance,datname) (rate(pg_stat_database_xact_commit{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\",datname!~\"postgres|template0|template1|\"}[10m])))) >= bool 0.1)), \"target\", \" / \", \"instance\", \"datname\"))), \"Check\", \"Database rollbacks need review\", \"\", \"\"), \"Action\", \"Review when 10-minute rollback share is at least 10 percent and total rate at least 0.1 per second; confirm expected behavior\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_join((2 * (sum by(instance,datname) (increase(pg_stat_database_deadlocks{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\",datname!~\"postgres|template0|template1|\"}[10m])) > bool 0)), \"target\", \" / \", \"instance\", \"datname\"))), \"Check\", \"Recent database deadlocks\", \"\", \"\"), \"Action\", \"Inspect lock contention and transaction logs; at least one deadlock in the last 10 minutes\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_join(((max by(vhost,queue) (rabbitmq_detailed_queue_messages_ready{job=\"rabbitmq\",queue=~\"(?i).*(dlq|dead.?letter).*\"})) > bool 0), \"target\", \" / \", \"vhost\", \"queue\"))), \"Check\", \"Possible dead-letter backlog\", \"\", \"\"), \"Action\", \"Queue name suggests a DLQ; inspect message headers and routing before deciding on replay or removal\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_join((2 * ((min_over_time(rabbitmq_detailed_queue_messages_ready{job=\"rabbitmq\",queue!~\"(?i).*(dlq|dead.?letter).*\"}[5m]) > bool 0) * on(job,instance,vhost,queue) (max_over_time(rabbitmq_detailed_queue_consumers{job=\"rabbitmq\",queue!~\"(?i).*(dlq|dead.?letter).*\"}[5m]) == bool 0))), \"target\", \" / \", \"vhost\", \"queue\"))), \"Check\", \"Work queue has no consumers\", \"\", \"\"), \"Action\", \"Non-DLQ-named queue has waiting messages and no consumers across available samples in the last 5 minutes\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_replace((2 * ((count by(job) (up) or on(job) (0 * (label_replace(vector(1), \"job\", \"alertmanager\", \"\", \"\") or label_replace(vector(6), \"job\", \"blackbox-health\", \"\", \"\") or label_replace(vector(1), \"job\", \"cadvisor\", \"\", \"\") or label_replace(vector(1), \"job\", \"docker\", \"\", \"\") or label_replace(vector(1), \"job\", \"mac13-server\", \"\", \"\") or label_replace(vector(1), \"job\", \"postgres-runs-ai-analyzer\", \"\", \"\") or label_replace(vector(1), \"job\", \"postgres-runsapp\", \"\", \"\") or label_replace(vector(1), \"job\", \"postgres-sequences-runs-ai-analyzer\", \"\", \"\") or label_replace(vector(1), \"job\", \"postgres-sequences-runsapp\", \"\", \"\") or label_replace(vector(1), \"job\", \"prometheus\", \"\", \"\") or label_replace(vector(1), \"job\", \"rabbitmq\", \"\", \"\") or label_replace(vector(1), \"job\", \"rabbitmq-node\", \"\", \"\") or label_replace(vector(1), \"job\", \"runs-server\", \"\", \"\")))) < bool on(job) (label_replace(vector(1), \"job\", \"alertmanager\", \"\", \"\") or label_replace(vector(6), \"job\", \"blackbox-health\", \"\", \"\") or label_replace(vector(1), \"job\", \"cadvisor\", \"\", \"\") or label_replace(vector(1), \"job\", \"docker\", \"\", \"\") or label_replace(vector(1), \"job\", \"mac13-server\", \"\", \"\") or label_replace(vector(1), \"job\", \"postgres-runs-ai-analyzer\", \"\", \"\") or label_replace(vector(1), \"job\", \"postgres-runsapp\", \"\", \"\") or label_replace(vector(1), \"job\", \"postgres-sequences-runs-ai-analyzer\", \"\", \"\") or label_replace(vector(1), \"job\", \"postgres-sequences-runsapp\", \"\", \"\") or label_replace(vector(1), \"job\", \"prometheus\", \"\", \"\") or label_replace(vector(1), \"job\", \"rabbitmq\", \"\", \"\") or label_replace(vector(1), \"job\", \"rabbitmq-node\", \"\", \"\") or label_replace(vector(1), \"job\", \"runs-server\", \"\", \"\")))), \"target\", \"$1\", \"job\", \"(.*)\"))), \"Check\", \"Expected scrape target missing\", \"\", \"\"), \"Action\", \"Compare Prometheus Targets with expected counts from your supplied configuration\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_replace((2 * ((label_replace(vector(1), \"job\", \"runs-server\", \"\", \"\") or label_replace(vector(1), \"job\", \"mac13-server\", \"\", \"\")) unless on(job) node_memory_MemAvailable_bytes{job=~\"runs-server|mac13-server\"})), \"target\", \"$1\", \"job\", \"(.*)\"))), \"Check\", \"Missing host memory metrics\", \"\", \"\"), \"Action\", \"Check Node Exporter target and collector; do not infer healthy memory from absent data\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_join((2 * ((label_replace(label_replace(vector(1), \"instance\", \"runsapp-db\", \"\", \"\"), \"datname\", \"dbcleaner\", \"\", \"\") or label_replace(label_replace(vector(1), \"instance\", \"runsapp-db\", \"\", \"\"), \"datname\", \"event-service\", \"\", \"\") or label_replace(label_replace(vector(1), \"instance\", \"runsapp-db\", \"\", \"\"), \"datname\", \"litellm\", \"\", \"\") or label_replace(label_replace(vector(1), \"instance\", \"runsapp-db\", \"\", \"\"), \"datname\", \"my-github-cleaner\", \"\", \"\") or label_replace(label_replace(vector(1), \"instance\", \"runsapp-db\", \"\", \"\"), \"datname\", \"runsapp_db\", \"\", \"\") or label_replace(label_replace(vector(1), \"instance\", \"runsapp-db\", \"\", \"\"), \"datname\", \"sathishlogger\", \"\", \"\") or label_replace(label_replace(vector(1), \"instance\", \"runs-ai-analyzer-db\", \"\", \"\"), \"datname\", \"runs_ai_analyzer_db\", \"\", \"\")) unless on(instance,datname) (pg_stat_database_numbackends{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\",datname!~\"postgres|template0|template1|\"} and on(job,instance) (up{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\"} == 1)))), \"target\", \" / \", \"instance\", \"datname\"))), \"Check\", \"Missing database activity metrics\", \"\", \"\"), \"Action\", \"Inspect database exporter permissions and coverage for this known database\", \"\", \"\"))) == 3) or vector(0)",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "refId": "A",
+          "legendFormat": "{{target}}"
+        }
+      ],
+      "description": "Count of current rule-based findings across all configured targets. Filters below apply only to detailed panels. Dashboard colors are not installed notification rules.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#73BF69",
+                "value": null
+              },
+              {
+                "color": "#F2495C",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 39,
+      "title": "Warnings",
+      "type": "stat",
+      "gridPos": {
+        "x": 6,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "count(((label_replace(label_replace((max by(target) (label_join((3 * (max_over_time(up[2m]) == bool 0)), \"target\", \" / \", \"job\", \"instance\"))), \"Check\", \"Scrape unavailable\", \"\", \"\"), \"Action\", \"Inspect target and service logs; no successful scrape in the last 2 minutes\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_replace((3 * (max_over_time(probe_success{job=\"blackbox-health\"}[2m]) == bool 0)), \"target\", \"$1\", \"app\", \"(.*)\"))), \"Check\", \"Application probe failed\", \"\", \"\"), \"Action\", \"Inspect the endpoint and application logs; no passing result in the last 2 minutes\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_replace((2 * ((label_replace(vector(1), \"app\", \"nextcloud\", \"\", \"\") or label_replace(vector(1), \"app\", \"immich\", \"\", \"\") or label_replace(vector(1), \"app\", \"runs-app\", \"\", \"\") or label_replace(vector(1), \"app\", \"runs-ai-analyzer\", \"\", \"\") or label_replace(vector(1), \"app\", \"eventstracker\", \"\", \"\") or label_replace(vector(1), \"app\", \"sathishlogger\", \"\", \"\")) unless on(app) (probe_success{job=\"blackbox-health\"} and on(job,instance) (up{job=\"blackbox-health\"} == 1)))), \"target\", \"$1\", \"app\", \"(.*)\"))), \"Check\", \"Missing application result\", \"\", \"\"), \"Action\", \"Check Blackbox target and collection; missing data is not proof the application is down\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_replace((3 * (max_over_time(pg_up{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\"}[2m]) == bool 0)), \"target\", \"$1\", \"instance\", \"(.*)\"))), \"Check\", \"PostgreSQL connection failed\", \"\", \"\"), \"Action\", \"Inspect database reachability and exporter credentials; exporter reports connection failure\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_replace((2 * ((label_replace(vector(1), \"instance\", \"runsapp-db\", \"\", \"\") or label_replace(vector(1), \"instance\", \"runs-ai-analyzer-db\", \"\", \"\")) unless on(instance) (pg_up{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\"} and on(job,instance) (up{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\"} == 1)))), \"target\", \"$1\", \"instance\", \"(.*)\"))), \"Check\", \"Missing database connection result\", \"\", \"\"), \"Action\", \"Check exporter collection before interpreting database health\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_replace((((max by(job) (100 * (1 - node_filesystem_avail_bytes{job=~\"runs-server|mac13-server\",mountpoint=\"/\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs\"} / node_filesystem_size_bytes{job=~\"runs-server|mac13-server\",mountpoint=\"/\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs\"}))) >= bool 70) + ((max by(job) (100 * (1 - node_filesystem_avail_bytes{job=~\"runs-server|mac13-server\",mountpoint=\"/\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs\"} / node_filesystem_size_bytes{job=~\"runs-server|mac13-server\",mountpoint=\"/\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs\"}))) >= bool 80) + ((max by(job) (100 * (1 - node_filesystem_avail_bytes{job=~\"runs-server|mac13-server\",mountpoint=\"/\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs\"} / node_filesystem_size_bytes{job=~\"runs-server|mac13-server\",mountpoint=\"/\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs\"}))) >= bool 90)), \"target\", \"$1\", \"job\", \"(.*)\"))), \"Check\", \"Root disk capacity\", \"\", \"\"), \"Action\", \"Review at 70 percent; warning at 80; critical at 90; inspect largest folders and retention\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_replace((2 * ((100 * (1 - avg by(job) (rate(node_cpu_seconds_total{job=~\"runs-server|mac13-server\",mode=\"idle\"}[10m])))) >= bool 80) + ((100 * (1 - avg by(job) (rate(node_cpu_seconds_total{job=~\"runs-server|mac13-server\",mode=\"idle\"}[10m])))) >= bool 95)), \"target\", \"$1\", \"job\", \"(.*)\"))), \"Check\", \"CPU pressure\", \"\", \"\"), \"Action\", \"10-minute average: warning at 80 percent; critical at 95; identify the busiest process\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_replace((2 * ((max by(job) (100 * (1 - node_memory_MemAvailable_bytes{job=~\"runs-server|mac13-server\"} / node_memory_MemTotal_bytes{job=~\"runs-server|mac13-server\"}))) >= bool 85) + ((max by(job) (100 * (1 - node_memory_MemAvailable_bytes{job=~\"runs-server|mac13-server\"} / node_memory_MemTotal_bytes{job=~\"runs-server|mac13-server\"}))) >= bool 95)), \"target\", \"$1\", \"job\", \"(.*)\"))), \"Check\", \"Memory pressure\", \"\", \"\"), \"Action\", \"Warning at 85 percent used; critical at 95; inspect consumers and available memory\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_join(((((100 * (sum by(instance,datname) (rate(pg_stat_database_xact_rollback{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\",datname!~\"postgres|template0|template1|\"}[10m]))) / clamp_min(((sum by(instance,datname) (rate(pg_stat_database_xact_rollback{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\",datname!~\"postgres|template0|template1|\"}[10m]))) + (sum by(instance,datname) (rate(pg_stat_database_xact_commit{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\",datname!~\"postgres|template0|template1|\"}[10m])))), 0.000001))) >= bool 10) * (((sum by(instance,datname) (rate(pg_stat_database_xact_rollback{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\",datname!~\"postgres|template0|template1|\"}[10m]))) + (sum by(instance,datname) (rate(pg_stat_database_xact_commit{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\",datname!~\"postgres|template0|template1|\"}[10m])))) >= bool 0.1)), \"target\", \" / \", \"instance\", \"datname\"))), \"Check\", \"Database rollbacks need review\", \"\", \"\"), \"Action\", \"Review when 10-minute rollback share is at least 10 percent and total rate at least 0.1 per second; confirm expected behavior\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_join((2 * (sum by(instance,datname) (increase(pg_stat_database_deadlocks{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\",datname!~\"postgres|template0|template1|\"}[10m])) > bool 0)), \"target\", \" / \", \"instance\", \"datname\"))), \"Check\", \"Recent database deadlocks\", \"\", \"\"), \"Action\", \"Inspect lock contention and transaction logs; at least one deadlock in the last 10 minutes\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_join(((max by(vhost,queue) (rabbitmq_detailed_queue_messages_ready{job=\"rabbitmq\",queue=~\"(?i).*(dlq|dead.?letter).*\"})) > bool 0), \"target\", \" / \", \"vhost\", \"queue\"))), \"Check\", \"Possible dead-letter backlog\", \"\", \"\"), \"Action\", \"Queue name suggests a DLQ; inspect message headers and routing before deciding on replay or removal\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_join((2 * ((min_over_time(rabbitmq_detailed_queue_messages_ready{job=\"rabbitmq\",queue!~\"(?i).*(dlq|dead.?letter).*\"}[5m]) > bool 0) * on(job,instance,vhost,queue) (max_over_time(rabbitmq_detailed_queue_consumers{job=\"rabbitmq\",queue!~\"(?i).*(dlq|dead.?letter).*\"}[5m]) == bool 0))), \"target\", \" / \", \"vhost\", \"queue\"))), \"Check\", \"Work queue has no consumers\", \"\", \"\"), \"Action\", \"Non-DLQ-named queue has waiting messages and no consumers across available samples in the last 5 minutes\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_replace((2 * ((count by(job) (up) or on(job) (0 * (label_replace(vector(1), \"job\", \"alertmanager\", \"\", \"\") or label_replace(vector(6), \"job\", \"blackbox-health\", \"\", \"\") or label_replace(vector(1), \"job\", \"cadvisor\", \"\", \"\") or label_replace(vector(1), \"job\", \"docker\", \"\", \"\") or label_replace(vector(1), \"job\", \"mac13-server\", \"\", \"\") or label_replace(vector(1), \"job\", \"postgres-runs-ai-analyzer\", \"\", \"\") or label_replace(vector(1), \"job\", \"postgres-runsapp\", \"\", \"\") or label_replace(vector(1), \"job\", \"postgres-sequences-runs-ai-analyzer\", \"\", \"\") or label_replace(vector(1), \"job\", \"postgres-sequences-runsapp\", \"\", \"\") or label_replace(vector(1), \"job\", \"prometheus\", \"\", \"\") or label_replace(vector(1), \"job\", \"rabbitmq\", \"\", \"\") or label_replace(vector(1), \"job\", \"rabbitmq-node\", \"\", \"\") or label_replace(vector(1), \"job\", \"runs-server\", \"\", \"\")))) < bool on(job) (label_replace(vector(1), \"job\", \"alertmanager\", \"\", \"\") or label_replace(vector(6), \"job\", \"blackbox-health\", \"\", \"\") or label_replace(vector(1), \"job\", \"cadvisor\", \"\", \"\") or label_replace(vector(1), \"job\", \"docker\", \"\", \"\") or label_replace(vector(1), \"job\", \"mac13-server\", \"\", \"\") or label_replace(vector(1), \"job\", \"postgres-runs-ai-analyzer\", \"\", \"\") or label_replace(vector(1), \"job\", \"postgres-runsapp\", \"\", \"\") or label_replace(vector(1), \"job\", \"postgres-sequences-runs-ai-analyzer\", \"\", \"\") or label_replace(vector(1), \"job\", \"postgres-sequences-runsapp\", \"\", \"\") or label_replace(vector(1), \"job\", \"prometheus\", \"\", \"\") or label_replace(vector(1), \"job\", \"rabbitmq\", \"\", \"\") or label_replace(vector(1), \"job\", \"rabbitmq-node\", \"\", \"\") or label_replace(vector(1), \"job\", \"runs-server\", \"\", \"\")))), \"target\", \"$1\", \"job\", \"(.*)\"))), \"Check\", \"Expected scrape target missing\", \"\", \"\"), \"Action\", \"Compare Prometheus Targets with expected counts from your supplied configuration\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_replace((2 * ((label_replace(vector(1), \"job\", \"runs-server\", \"\", \"\") or label_replace(vector(1), \"job\", \"mac13-server\", \"\", \"\")) unless on(job) node_memory_MemAvailable_bytes{job=~\"runs-server|mac13-server\"})), \"target\", \"$1\", \"job\", \"(.*)\"))), \"Check\", \"Missing host memory metrics\", \"\", \"\"), \"Action\", \"Check Node Exporter target and collector; do not infer healthy memory from absent data\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_join((2 * ((label_replace(label_replace(vector(1), \"instance\", \"runsapp-db\", \"\", \"\"), \"datname\", \"dbcleaner\", \"\", \"\") or label_replace(label_replace(vector(1), \"instance\", \"runsapp-db\", \"\", \"\"), \"datname\", \"event-service\", \"\", \"\") or label_replace(label_replace(vector(1), \"instance\", \"runsapp-db\", \"\", \"\"), \"datname\", \"litellm\", \"\", \"\") or label_replace(label_replace(vector(1), \"instance\", \"runsapp-db\", \"\", \"\"), \"datname\", \"my-github-cleaner\", \"\", \"\") or label_replace(label_replace(vector(1), \"instance\", \"runsapp-db\", \"\", \"\"), \"datname\", \"runsapp_db\", \"\", \"\") or label_replace(label_replace(vector(1), \"instance\", \"runsapp-db\", \"\", \"\"), \"datname\", \"sathishlogger\", \"\", \"\") or label_replace(label_replace(vector(1), \"instance\", \"runs-ai-analyzer-db\", \"\", \"\"), \"datname\", \"runs_ai_analyzer_db\", \"\", \"\")) unless on(instance,datname) (pg_stat_database_numbackends{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\",datname!~\"postgres|template0|template1|\"} and on(job,instance) (up{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\"} == 1)))), \"target\", \" / \", \"instance\", \"datname\"))), \"Check\", \"Missing database activity metrics\", \"\", \"\"), \"Action\", \"Inspect database exporter permissions and coverage for this known database\", \"\", \"\"))) == 2) or vector(0)",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "refId": "A",
+          "legendFormat": "{{target}}"
+        }
+      ],
+      "description": "Count of current rule-based findings across all configured targets. Filters below apply only to detailed panels. Dashboard colors are not installed notification rules.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#73BF69",
+                "value": null
+              },
+              {
+                "color": "#FF9830",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 40,
+      "title": "Review items",
+      "type": "stat",
+      "gridPos": {
+        "x": 12,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "count(((label_replace(label_replace((max by(target) (label_join((3 * (max_over_time(up[2m]) == bool 0)), \"target\", \" / \", \"job\", \"instance\"))), \"Check\", \"Scrape unavailable\", \"\", \"\"), \"Action\", \"Inspect target and service logs; no successful scrape in the last 2 minutes\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_replace((3 * (max_over_time(probe_success{job=\"blackbox-health\"}[2m]) == bool 0)), \"target\", \"$1\", \"app\", \"(.*)\"))), \"Check\", \"Application probe failed\", \"\", \"\"), \"Action\", \"Inspect the endpoint and application logs; no passing result in the last 2 minutes\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_replace((2 * ((label_replace(vector(1), \"app\", \"nextcloud\", \"\", \"\") or label_replace(vector(1), \"app\", \"immich\", \"\", \"\") or label_replace(vector(1), \"app\", \"runs-app\", \"\", \"\") or label_replace(vector(1), \"app\", \"runs-ai-analyzer\", \"\", \"\") or label_replace(vector(1), \"app\", \"eventstracker\", \"\", \"\") or label_replace(vector(1), \"app\", \"sathishlogger\", \"\", \"\")) unless on(app) (probe_success{job=\"blackbox-health\"} and on(job,instance) (up{job=\"blackbox-health\"} == 1)))), \"target\", \"$1\", \"app\", \"(.*)\"))), \"Check\", \"Missing application result\", \"\", \"\"), \"Action\", \"Check Blackbox target and collection; missing data is not proof the application is down\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_replace((3 * (max_over_time(pg_up{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\"}[2m]) == bool 0)), \"target\", \"$1\", \"instance\", \"(.*)\"))), \"Check\", \"PostgreSQL connection failed\", \"\", \"\"), \"Action\", \"Inspect database reachability and exporter credentials; exporter reports connection failure\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_replace((2 * ((label_replace(vector(1), \"instance\", \"runsapp-db\", \"\", \"\") or label_replace(vector(1), \"instance\", \"runs-ai-analyzer-db\", \"\", \"\")) unless on(instance) (pg_up{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\"} and on(job,instance) (up{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\"} == 1)))), \"target\", \"$1\", \"instance\", \"(.*)\"))), \"Check\", \"Missing database connection result\", \"\", \"\"), \"Action\", \"Check exporter collection before interpreting database health\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_replace((((max by(job) (100 * (1 - node_filesystem_avail_bytes{job=~\"runs-server|mac13-server\",mountpoint=\"/\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs\"} / node_filesystem_size_bytes{job=~\"runs-server|mac13-server\",mountpoint=\"/\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs\"}))) >= bool 70) + ((max by(job) (100 * (1 - node_filesystem_avail_bytes{job=~\"runs-server|mac13-server\",mountpoint=\"/\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs\"} / node_filesystem_size_bytes{job=~\"runs-server|mac13-server\",mountpoint=\"/\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs\"}))) >= bool 80) + ((max by(job) (100 * (1 - node_filesystem_avail_bytes{job=~\"runs-server|mac13-server\",mountpoint=\"/\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs\"} / node_filesystem_size_bytes{job=~\"runs-server|mac13-server\",mountpoint=\"/\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs\"}))) >= bool 90)), \"target\", \"$1\", \"job\", \"(.*)\"))), \"Check\", \"Root disk capacity\", \"\", \"\"), \"Action\", \"Review at 70 percent; warning at 80; critical at 90; inspect largest folders and retention\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_replace((2 * ((100 * (1 - avg by(job) (rate(node_cpu_seconds_total{job=~\"runs-server|mac13-server\",mode=\"idle\"}[10m])))) >= bool 80) + ((100 * (1 - avg by(job) (rate(node_cpu_seconds_total{job=~\"runs-server|mac13-server\",mode=\"idle\"}[10m])))) >= bool 95)), \"target\", \"$1\", \"job\", \"(.*)\"))), \"Check\", \"CPU pressure\", \"\", \"\"), \"Action\", \"10-minute average: warning at 80 percent; critical at 95; identify the busiest process\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_replace((2 * ((max by(job) (100 * (1 - node_memory_MemAvailable_bytes{job=~\"runs-server|mac13-server\"} / node_memory_MemTotal_bytes{job=~\"runs-server|mac13-server\"}))) >= bool 85) + ((max by(job) (100 * (1 - node_memory_MemAvailable_bytes{job=~\"runs-server|mac13-server\"} / node_memory_MemTotal_bytes{job=~\"runs-server|mac13-server\"}))) >= bool 95)), \"target\", \"$1\", \"job\", \"(.*)\"))), \"Check\", \"Memory pressure\", \"\", \"\"), \"Action\", \"Warning at 85 percent used; critical at 95; inspect consumers and available memory\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_join(((((100 * (sum by(instance,datname) (rate(pg_stat_database_xact_rollback{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\",datname!~\"postgres|template0|template1|\"}[10m]))) / clamp_min(((sum by(instance,datname) (rate(pg_stat_database_xact_rollback{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\",datname!~\"postgres|template0|template1|\"}[10m]))) + (sum by(instance,datname) (rate(pg_stat_database_xact_commit{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\",datname!~\"postgres|template0|template1|\"}[10m])))), 0.000001))) >= bool 10) * (((sum by(instance,datname) (rate(pg_stat_database_xact_rollback{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\",datname!~\"postgres|template0|template1|\"}[10m]))) + (sum by(instance,datname) (rate(pg_stat_database_xact_commit{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\",datname!~\"postgres|template0|template1|\"}[10m])))) >= bool 0.1)), \"target\", \" / \", \"instance\", \"datname\"))), \"Check\", \"Database rollbacks need review\", \"\", \"\"), \"Action\", \"Review when 10-minute rollback share is at least 10 percent and total rate at least 0.1 per second; confirm expected behavior\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_join((2 * (sum by(instance,datname) (increase(pg_stat_database_deadlocks{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\",datname!~\"postgres|template0|template1|\"}[10m])) > bool 0)), \"target\", \" / \", \"instance\", \"datname\"))), \"Check\", \"Recent database deadlocks\", \"\", \"\"), \"Action\", \"Inspect lock contention and transaction logs; at least one deadlock in the last 10 minutes\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_join(((max by(vhost,queue) (rabbitmq_detailed_queue_messages_ready{job=\"rabbitmq\",queue=~\"(?i).*(dlq|dead.?letter).*\"})) > bool 0), \"target\", \" / \", \"vhost\", \"queue\"))), \"Check\", \"Possible dead-letter backlog\", \"\", \"\"), \"Action\", \"Queue name suggests a DLQ; inspect message headers and routing before deciding on replay or removal\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_join((2 * ((min_over_time(rabbitmq_detailed_queue_messages_ready{job=\"rabbitmq\",queue!~\"(?i).*(dlq|dead.?letter).*\"}[5m]) > bool 0) * on(job,instance,vhost,queue) (max_over_time(rabbitmq_detailed_queue_consumers{job=\"rabbitmq\",queue!~\"(?i).*(dlq|dead.?letter).*\"}[5m]) == bool 0))), \"target\", \" / \", \"vhost\", \"queue\"))), \"Check\", \"Work queue has no consumers\", \"\", \"\"), \"Action\", \"Non-DLQ-named queue has waiting messages and no consumers across available samples in the last 5 minutes\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_replace((2 * ((count by(job) (up) or on(job) (0 * (label_replace(vector(1), \"job\", \"alertmanager\", \"\", \"\") or label_replace(vector(6), \"job\", \"blackbox-health\", \"\", \"\") or label_replace(vector(1), \"job\", \"cadvisor\", \"\", \"\") or label_replace(vector(1), \"job\", \"docker\", \"\", \"\") or label_replace(vector(1), \"job\", \"mac13-server\", \"\", \"\") or label_replace(vector(1), \"job\", \"postgres-runs-ai-analyzer\", \"\", \"\") or label_replace(vector(1), \"job\", \"postgres-runsapp\", \"\", \"\") or label_replace(vector(1), \"job\", \"postgres-sequences-runs-ai-analyzer\", \"\", \"\") or label_replace(vector(1), \"job\", \"postgres-sequences-runsapp\", \"\", \"\") or label_replace(vector(1), \"job\", \"prometheus\", \"\", \"\") or label_replace(vector(1), \"job\", \"rabbitmq\", \"\", \"\") or label_replace(vector(1), \"job\", \"rabbitmq-node\", \"\", \"\") or label_replace(vector(1), \"job\", \"runs-server\", \"\", \"\")))) < bool on(job) (label_replace(vector(1), \"job\", \"alertmanager\", \"\", \"\") or label_replace(vector(6), \"job\", \"blackbox-health\", \"\", \"\") or label_replace(vector(1), \"job\", \"cadvisor\", \"\", \"\") or label_replace(vector(1), \"job\", \"docker\", \"\", \"\") or label_replace(vector(1), \"job\", \"mac13-server\", \"\", \"\") or label_replace(vector(1), \"job\", \"postgres-runs-ai-analyzer\", \"\", \"\") or label_replace(vector(1), \"job\", \"postgres-runsapp\", \"\", \"\") or label_replace(vector(1), \"job\", \"postgres-sequences-runs-ai-analyzer\", \"\", \"\") or label_replace(vector(1), \"job\", \"postgres-sequences-runsapp\", \"\", \"\") or label_replace(vector(1), \"job\", \"prometheus\", \"\", \"\") or label_replace(vector(1), \"job\", \"rabbitmq\", \"\", \"\") or label_replace(vector(1), \"job\", \"rabbitmq-node\", \"\", \"\") or label_replace(vector(1), \"job\", \"runs-server\", \"\", \"\")))), \"target\", \"$1\", \"job\", \"(.*)\"))), \"Check\", \"Expected scrape target missing\", \"\", \"\"), \"Action\", \"Compare Prometheus Targets with expected counts from your supplied configuration\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_replace((2 * ((label_replace(vector(1), \"job\", \"runs-server\", \"\", \"\") or label_replace(vector(1), \"job\", \"mac13-server\", \"\", \"\")) unless on(job) node_memory_MemAvailable_bytes{job=~\"runs-server|mac13-server\"})), \"target\", \"$1\", \"job\", \"(.*)\"))), \"Check\", \"Missing host memory metrics\", \"\", \"\"), \"Action\", \"Check Node Exporter target and collector; do not infer healthy memory from absent data\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_join((2 * ((label_replace(label_replace(vector(1), \"instance\", \"runsapp-db\", \"\", \"\"), \"datname\", \"dbcleaner\", \"\", \"\") or label_replace(label_replace(vector(1), \"instance\", \"runsapp-db\", \"\", \"\"), \"datname\", \"event-service\", \"\", \"\") or label_replace(label_replace(vector(1), \"instance\", \"runsapp-db\", \"\", \"\"), \"datname\", \"litellm\", \"\", \"\") or label_replace(label_replace(vector(1), \"instance\", \"runsapp-db\", \"\", \"\"), \"datname\", \"my-github-cleaner\", \"\", \"\") or label_replace(label_replace(vector(1), \"instance\", \"runsapp-db\", \"\", \"\"), \"datname\", \"runsapp_db\", \"\", \"\") or label_replace(label_replace(vector(1), \"instance\", \"runsapp-db\", \"\", \"\"), \"datname\", \"sathishlogger\", \"\", \"\") or label_replace(label_replace(vector(1), \"instance\", \"runs-ai-analyzer-db\", \"\", \"\"), \"datname\", \"runs_ai_analyzer_db\", \"\", \"\")) unless on(instance,datname) (pg_stat_database_numbackends{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\",datname!~\"postgres|template0|template1|\"} and on(job,instance) (up{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\"} == 1)))), \"target\", \" / \", \"instance\", \"datname\"))), \"Check\", \"Missing database activity metrics\", \"\", \"\"), \"Action\", \"Inspect database exporter permissions and coverage for this known database\", \"\", \"\"))) == 1) or vector(0)",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "refId": "A",
+          "legendFormat": "{{target}}"
+        }
+      ],
+      "description": "Count of current rule-based findings across all configured targets. Filters below apply only to detailed panels. Dashboard colors are not installed notification rules.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#73BF69",
+                "value": null
+              },
+              {
+                "color": "#FADE2A",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 41,
+      "title": "Scrape targets",
+      "type": "stat",
+      "gridPos": {
+        "x": 18,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "count(up)",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "refId": "A",
+          "legendFormat": "{{target}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#5794F2"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 42,
+      "title": "Needs attention \u2014 highest priority first",
+      "type": "table",
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 24,
+        "h": 11
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "sort_desc(((((label_replace(label_replace((max by(target) (label_join((3 * (max_over_time(up[2m]) == bool 0)), \"target\", \" / \", \"job\", \"instance\"))), \"Check\", \"Scrape unavailable\", \"\", \"\"), \"Action\", \"Inspect target and service logs; no successful scrape in the last 2 minutes\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_replace((3 * (max_over_time(probe_success{job=\"blackbox-health\"}[2m]) == bool 0)), \"target\", \"$1\", \"app\", \"(.*)\"))), \"Check\", \"Application probe failed\", \"\", \"\"), \"Action\", \"Inspect the endpoint and application logs; no passing result in the last 2 minutes\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_replace((2 * ((label_replace(vector(1), \"app\", \"nextcloud\", \"\", \"\") or label_replace(vector(1), \"app\", \"immich\", \"\", \"\") or label_replace(vector(1), \"app\", \"runs-app\", \"\", \"\") or label_replace(vector(1), \"app\", \"runs-ai-analyzer\", \"\", \"\") or label_replace(vector(1), \"app\", \"eventstracker\", \"\", \"\") or label_replace(vector(1), \"app\", \"sathishlogger\", \"\", \"\")) unless on(app) (probe_success{job=\"blackbox-health\"} and on(job,instance) (up{job=\"blackbox-health\"} == 1)))), \"target\", \"$1\", \"app\", \"(.*)\"))), \"Check\", \"Missing application result\", \"\", \"\"), \"Action\", \"Check Blackbox target and collection; missing data is not proof the application is down\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_replace((3 * (max_over_time(pg_up{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\"}[2m]) == bool 0)), \"target\", \"$1\", \"instance\", \"(.*)\"))), \"Check\", \"PostgreSQL connection failed\", \"\", \"\"), \"Action\", \"Inspect database reachability and exporter credentials; exporter reports connection failure\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_replace((2 * ((label_replace(vector(1), \"instance\", \"runsapp-db\", \"\", \"\") or label_replace(vector(1), \"instance\", \"runs-ai-analyzer-db\", \"\", \"\")) unless on(instance) (pg_up{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\"} and on(job,instance) (up{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\"} == 1)))), \"target\", \"$1\", \"instance\", \"(.*)\"))), \"Check\", \"Missing database connection result\", \"\", \"\"), \"Action\", \"Check exporter collection before interpreting database health\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_replace((((max by(job) (100 * (1 - node_filesystem_avail_bytes{job=~\"runs-server|mac13-server\",mountpoint=\"/\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs\"} / node_filesystem_size_bytes{job=~\"runs-server|mac13-server\",mountpoint=\"/\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs\"}))) >= bool 70) + ((max by(job) (100 * (1 - node_filesystem_avail_bytes{job=~\"runs-server|mac13-server\",mountpoint=\"/\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs\"} / node_filesystem_size_bytes{job=~\"runs-server|mac13-server\",mountpoint=\"/\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs\"}))) >= bool 80) + ((max by(job) (100 * (1 - node_filesystem_avail_bytes{job=~\"runs-server|mac13-server\",mountpoint=\"/\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs\"} / node_filesystem_size_bytes{job=~\"runs-server|mac13-server\",mountpoint=\"/\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs\"}))) >= bool 90)), \"target\", \"$1\", \"job\", \"(.*)\"))), \"Check\", \"Root disk capacity\", \"\", \"\"), \"Action\", \"Review at 70 percent; warning at 80; critical at 90; inspect largest folders and retention\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_replace((2 * ((100 * (1 - avg by(job) (rate(node_cpu_seconds_total{job=~\"runs-server|mac13-server\",mode=\"idle\"}[10m])))) >= bool 80) + ((100 * (1 - avg by(job) (rate(node_cpu_seconds_total{job=~\"runs-server|mac13-server\",mode=\"idle\"}[10m])))) >= bool 95)), \"target\", \"$1\", \"job\", \"(.*)\"))), \"Check\", \"CPU pressure\", \"\", \"\"), \"Action\", \"10-minute average: warning at 80 percent; critical at 95; identify the busiest process\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_replace((2 * ((max by(job) (100 * (1 - node_memory_MemAvailable_bytes{job=~\"runs-server|mac13-server\"} / node_memory_MemTotal_bytes{job=~\"runs-server|mac13-server\"}))) >= bool 85) + ((max by(job) (100 * (1 - node_memory_MemAvailable_bytes{job=~\"runs-server|mac13-server\"} / node_memory_MemTotal_bytes{job=~\"runs-server|mac13-server\"}))) >= bool 95)), \"target\", \"$1\", \"job\", \"(.*)\"))), \"Check\", \"Memory pressure\", \"\", \"\"), \"Action\", \"Warning at 85 percent used; critical at 95; inspect consumers and available memory\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_join(((((100 * (sum by(instance,datname) (rate(pg_stat_database_xact_rollback{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\",datname!~\"postgres|template0|template1|\"}[10m]))) / clamp_min(((sum by(instance,datname) (rate(pg_stat_database_xact_rollback{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\",datname!~\"postgres|template0|template1|\"}[10m]))) + (sum by(instance,datname) (rate(pg_stat_database_xact_commit{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\",datname!~\"postgres|template0|template1|\"}[10m])))), 0.000001))) >= bool 10) * (((sum by(instance,datname) (rate(pg_stat_database_xact_rollback{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\",datname!~\"postgres|template0|template1|\"}[10m]))) + (sum by(instance,datname) (rate(pg_stat_database_xact_commit{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\",datname!~\"postgres|template0|template1|\"}[10m])))) >= bool 0.1)), \"target\", \" / \", \"instance\", \"datname\"))), \"Check\", \"Database rollbacks need review\", \"\", \"\"), \"Action\", \"Review when 10-minute rollback share is at least 10 percent and total rate at least 0.1 per second; confirm expected behavior\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_join((2 * (sum by(instance,datname) (increase(pg_stat_database_deadlocks{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\",datname!~\"postgres|template0|template1|\"}[10m])) > bool 0)), \"target\", \" / \", \"instance\", \"datname\"))), \"Check\", \"Recent database deadlocks\", \"\", \"\"), \"Action\", \"Inspect lock contention and transaction logs; at least one deadlock in the last 10 minutes\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_join(((max by(vhost,queue) (rabbitmq_detailed_queue_messages_ready{job=\"rabbitmq\",queue=~\"(?i).*(dlq|dead.?letter).*\"})) > bool 0), \"target\", \" / \", \"vhost\", \"queue\"))), \"Check\", \"Possible dead-letter backlog\", \"\", \"\"), \"Action\", \"Queue name suggests a DLQ; inspect message headers and routing before deciding on replay or removal\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_join((2 * ((min_over_time(rabbitmq_detailed_queue_messages_ready{job=\"rabbitmq\",queue!~\"(?i).*(dlq|dead.?letter).*\"}[5m]) > bool 0) * on(job,instance,vhost,queue) (max_over_time(rabbitmq_detailed_queue_consumers{job=\"rabbitmq\",queue!~\"(?i).*(dlq|dead.?letter).*\"}[5m]) == bool 0))), \"target\", \" / \", \"vhost\", \"queue\"))), \"Check\", \"Work queue has no consumers\", \"\", \"\"), \"Action\", \"Non-DLQ-named queue has waiting messages and no consumers across available samples in the last 5 minutes\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_replace((2 * ((count by(job) (up) or on(job) (0 * (label_replace(vector(1), \"job\", \"alertmanager\", \"\", \"\") or label_replace(vector(6), \"job\", \"blackbox-health\", \"\", \"\") or label_replace(vector(1), \"job\", \"cadvisor\", \"\", \"\") or label_replace(vector(1), \"job\", \"docker\", \"\", \"\") or label_replace(vector(1), \"job\", \"mac13-server\", \"\", \"\") or label_replace(vector(1), \"job\", \"postgres-runs-ai-analyzer\", \"\", \"\") or label_replace(vector(1), \"job\", \"postgres-runsapp\", \"\", \"\") or label_replace(vector(1), \"job\", \"postgres-sequences-runs-ai-analyzer\", \"\", \"\") or label_replace(vector(1), \"job\", \"postgres-sequences-runsapp\", \"\", \"\") or label_replace(vector(1), \"job\", \"prometheus\", \"\", \"\") or label_replace(vector(1), \"job\", \"rabbitmq\", \"\", \"\") or label_replace(vector(1), \"job\", \"rabbitmq-node\", \"\", \"\") or label_replace(vector(1), \"job\", \"runs-server\", \"\", \"\")))) < bool on(job) (label_replace(vector(1), \"job\", \"alertmanager\", \"\", \"\") or label_replace(vector(6), \"job\", \"blackbox-health\", \"\", \"\") or label_replace(vector(1), \"job\", \"cadvisor\", \"\", \"\") or label_replace(vector(1), \"job\", \"docker\", \"\", \"\") or label_replace(vector(1), \"job\", \"mac13-server\", \"\", \"\") or label_replace(vector(1), \"job\", \"postgres-runs-ai-analyzer\", \"\", \"\") or label_replace(vector(1), \"job\", \"postgres-runsapp\", \"\", \"\") or label_replace(vector(1), \"job\", \"postgres-sequences-runs-ai-analyzer\", \"\", \"\") or label_replace(vector(1), \"job\", \"postgres-sequences-runsapp\", \"\", \"\") or label_replace(vector(1), \"job\", \"prometheus\", \"\", \"\") or label_replace(vector(1), \"job\", \"rabbitmq\", \"\", \"\") or label_replace(vector(1), \"job\", \"rabbitmq-node\", \"\", \"\") or label_replace(vector(1), \"job\", \"runs-server\", \"\", \"\")))), \"target\", \"$1\", \"job\", \"(.*)\"))), \"Check\", \"Expected scrape target missing\", \"\", \"\"), \"Action\", \"Compare Prometheus Targets with expected counts from your supplied configuration\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_replace((2 * ((label_replace(vector(1), \"job\", \"runs-server\", \"\", \"\") or label_replace(vector(1), \"job\", \"mac13-server\", \"\", \"\")) unless on(job) node_memory_MemAvailable_bytes{job=~\"runs-server|mac13-server\"})), \"target\", \"$1\", \"job\", \"(.*)\"))), \"Check\", \"Missing host memory metrics\", \"\", \"\"), \"Action\", \"Check Node Exporter target and collector; do not infer healthy memory from absent data\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_join((2 * ((label_replace(label_replace(vector(1), \"instance\", \"runsapp-db\", \"\", \"\"), \"datname\", \"dbcleaner\", \"\", \"\") or label_replace(label_replace(vector(1), \"instance\", \"runsapp-db\", \"\", \"\"), \"datname\", \"event-service\", \"\", \"\") or label_replace(label_replace(vector(1), \"instance\", \"runsapp-db\", \"\", \"\"), \"datname\", \"litellm\", \"\", \"\") or label_replace(label_replace(vector(1), \"instance\", \"runsapp-db\", \"\", \"\"), \"datname\", \"my-github-cleaner\", \"\", \"\") or label_replace(label_replace(vector(1), \"instance\", \"runsapp-db\", \"\", \"\"), \"datname\", \"runsapp_db\", \"\", \"\") or label_replace(label_replace(vector(1), \"instance\", \"runsapp-db\", \"\", \"\"), \"datname\", \"sathishlogger\", \"\", \"\") or label_replace(label_replace(vector(1), \"instance\", \"runs-ai-analyzer-db\", \"\", \"\"), \"datname\", \"runs_ai_analyzer_db\", \"\", \"\")) unless on(instance,datname) (pg_stat_database_numbackends{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\",datname!~\"postgres|template0|template1|\"} and on(job,instance) (up{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\"} == 1)))), \"target\", \" / \", \"instance\", \"datname\"))), \"Check\", \"Missing database activity metrics\", \"\", \"\"), \"Action\", \"Inspect database exporter permissions and coverage for this known database\", \"\", \"\"))) > 0)) or (label_replace(label_replace((label_replace(vector(0), \"target\", \"Configured checks\", \"\", \"\")), \"Check\", \"No threshold breaches\", \"\", \"\"), \"Action\", \"Continue routine monitoring; backup freshness and notification delivery are not evaluated here\", \"\", \"\") unless on() (((label_replace(label_replace((max by(target) (label_join((3 * (max_over_time(up[2m]) == bool 0)), \"target\", \" / \", \"job\", \"instance\"))), \"Check\", \"Scrape unavailable\", \"\", \"\"), \"Action\", \"Inspect target and service logs; no successful scrape in the last 2 minutes\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_replace((3 * (max_over_time(probe_success{job=\"blackbox-health\"}[2m]) == bool 0)), \"target\", \"$1\", \"app\", \"(.*)\"))), \"Check\", \"Application probe failed\", \"\", \"\"), \"Action\", \"Inspect the endpoint and application logs; no passing result in the last 2 minutes\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_replace((2 * ((label_replace(vector(1), \"app\", \"nextcloud\", \"\", \"\") or label_replace(vector(1), \"app\", \"immich\", \"\", \"\") or label_replace(vector(1), \"app\", \"runs-app\", \"\", \"\") or label_replace(vector(1), \"app\", \"runs-ai-analyzer\", \"\", \"\") or label_replace(vector(1), \"app\", \"eventstracker\", \"\", \"\") or label_replace(vector(1), \"app\", \"sathishlogger\", \"\", \"\")) unless on(app) (probe_success{job=\"blackbox-health\"} and on(job,instance) (up{job=\"blackbox-health\"} == 1)))), \"target\", \"$1\", \"app\", \"(.*)\"))), \"Check\", \"Missing application result\", \"\", \"\"), \"Action\", \"Check Blackbox target and collection; missing data is not proof the application is down\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_replace((3 * (max_over_time(pg_up{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\"}[2m]) == bool 0)), \"target\", \"$1\", \"instance\", \"(.*)\"))), \"Check\", \"PostgreSQL connection failed\", \"\", \"\"), \"Action\", \"Inspect database reachability and exporter credentials; exporter reports connection failure\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_replace((2 * ((label_replace(vector(1), \"instance\", \"runsapp-db\", \"\", \"\") or label_replace(vector(1), \"instance\", \"runs-ai-analyzer-db\", \"\", \"\")) unless on(instance) (pg_up{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\"} and on(job,instance) (up{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\"} == 1)))), \"target\", \"$1\", \"instance\", \"(.*)\"))), \"Check\", \"Missing database connection result\", \"\", \"\"), \"Action\", \"Check exporter collection before interpreting database health\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_replace((((max by(job) (100 * (1 - node_filesystem_avail_bytes{job=~\"runs-server|mac13-server\",mountpoint=\"/\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs\"} / node_filesystem_size_bytes{job=~\"runs-server|mac13-server\",mountpoint=\"/\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs\"}))) >= bool 70) + ((max by(job) (100 * (1 - node_filesystem_avail_bytes{job=~\"runs-server|mac13-server\",mountpoint=\"/\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs\"} / node_filesystem_size_bytes{job=~\"runs-server|mac13-server\",mountpoint=\"/\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs\"}))) >= bool 80) + ((max by(job) (100 * (1 - node_filesystem_avail_bytes{job=~\"runs-server|mac13-server\",mountpoint=\"/\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs\"} / node_filesystem_size_bytes{job=~\"runs-server|mac13-server\",mountpoint=\"/\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs\"}))) >= bool 90)), \"target\", \"$1\", \"job\", \"(.*)\"))), \"Check\", \"Root disk capacity\", \"\", \"\"), \"Action\", \"Review at 70 percent; warning at 80; critical at 90; inspect largest folders and retention\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_replace((2 * ((100 * (1 - avg by(job) (rate(node_cpu_seconds_total{job=~\"runs-server|mac13-server\",mode=\"idle\"}[10m])))) >= bool 80) + ((100 * (1 - avg by(job) (rate(node_cpu_seconds_total{job=~\"runs-server|mac13-server\",mode=\"idle\"}[10m])))) >= bool 95)), \"target\", \"$1\", \"job\", \"(.*)\"))), \"Check\", \"CPU pressure\", \"\", \"\"), \"Action\", \"10-minute average: warning at 80 percent; critical at 95; identify the busiest process\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_replace((2 * ((max by(job) (100 * (1 - node_memory_MemAvailable_bytes{job=~\"runs-server|mac13-server\"} / node_memory_MemTotal_bytes{job=~\"runs-server|mac13-server\"}))) >= bool 85) + ((max by(job) (100 * (1 - node_memory_MemAvailable_bytes{job=~\"runs-server|mac13-server\"} / node_memory_MemTotal_bytes{job=~\"runs-server|mac13-server\"}))) >= bool 95)), \"target\", \"$1\", \"job\", \"(.*)\"))), \"Check\", \"Memory pressure\", \"\", \"\"), \"Action\", \"Warning at 85 percent used; critical at 95; inspect consumers and available memory\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_join(((((100 * (sum by(instance,datname) (rate(pg_stat_database_xact_rollback{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\",datname!~\"postgres|template0|template1|\"}[10m]))) / clamp_min(((sum by(instance,datname) (rate(pg_stat_database_xact_rollback{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\",datname!~\"postgres|template0|template1|\"}[10m]))) + (sum by(instance,datname) (rate(pg_stat_database_xact_commit{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\",datname!~\"postgres|template0|template1|\"}[10m])))), 0.000001))) >= bool 10) * (((sum by(instance,datname) (rate(pg_stat_database_xact_rollback{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\",datname!~\"postgres|template0|template1|\"}[10m]))) + (sum by(instance,datname) (rate(pg_stat_database_xact_commit{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\",datname!~\"postgres|template0|template1|\"}[10m])))) >= bool 0.1)), \"target\", \" / \", \"instance\", \"datname\"))), \"Check\", \"Database rollbacks need review\", \"\", \"\"), \"Action\", \"Review when 10-minute rollback share is at least 10 percent and total rate at least 0.1 per second; confirm expected behavior\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_join((2 * (sum by(instance,datname) (increase(pg_stat_database_deadlocks{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\",datname!~\"postgres|template0|template1|\"}[10m])) > bool 0)), \"target\", \" / \", \"instance\", \"datname\"))), \"Check\", \"Recent database deadlocks\", \"\", \"\"), \"Action\", \"Inspect lock contention and transaction logs; at least one deadlock in the last 10 minutes\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_join(((max by(vhost,queue) (rabbitmq_detailed_queue_messages_ready{job=\"rabbitmq\",queue=~\"(?i).*(dlq|dead.?letter).*\"})) > bool 0), \"target\", \" / \", \"vhost\", \"queue\"))), \"Check\", \"Possible dead-letter backlog\", \"\", \"\"), \"Action\", \"Queue name suggests a DLQ; inspect message headers and routing before deciding on replay or removal\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_join((2 * ((min_over_time(rabbitmq_detailed_queue_messages_ready{job=\"rabbitmq\",queue!~\"(?i).*(dlq|dead.?letter).*\"}[5m]) > bool 0) * on(job,instance,vhost,queue) (max_over_time(rabbitmq_detailed_queue_consumers{job=\"rabbitmq\",queue!~\"(?i).*(dlq|dead.?letter).*\"}[5m]) == bool 0))), \"target\", \" / \", \"vhost\", \"queue\"))), \"Check\", \"Work queue has no consumers\", \"\", \"\"), \"Action\", \"Non-DLQ-named queue has waiting messages and no consumers across available samples in the last 5 minutes\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_replace((2 * ((count by(job) (up) or on(job) (0 * (label_replace(vector(1), \"job\", \"alertmanager\", \"\", \"\") or label_replace(vector(6), \"job\", \"blackbox-health\", \"\", \"\") or label_replace(vector(1), \"job\", \"cadvisor\", \"\", \"\") or label_replace(vector(1), \"job\", \"docker\", \"\", \"\") or label_replace(vector(1), \"job\", \"mac13-server\", \"\", \"\") or label_replace(vector(1), \"job\", \"postgres-runs-ai-analyzer\", \"\", \"\") or label_replace(vector(1), \"job\", \"postgres-runsapp\", \"\", \"\") or label_replace(vector(1), \"job\", \"postgres-sequences-runs-ai-analyzer\", \"\", \"\") or label_replace(vector(1), \"job\", \"postgres-sequences-runsapp\", \"\", \"\") or label_replace(vector(1), \"job\", \"prometheus\", \"\", \"\") or label_replace(vector(1), \"job\", \"rabbitmq\", \"\", \"\") or label_replace(vector(1), \"job\", \"rabbitmq-node\", \"\", \"\") or label_replace(vector(1), \"job\", \"runs-server\", \"\", \"\")))) < bool on(job) (label_replace(vector(1), \"job\", \"alertmanager\", \"\", \"\") or label_replace(vector(6), \"job\", \"blackbox-health\", \"\", \"\") or label_replace(vector(1), \"job\", \"cadvisor\", \"\", \"\") or label_replace(vector(1), \"job\", \"docker\", \"\", \"\") or label_replace(vector(1), \"job\", \"mac13-server\", \"\", \"\") or label_replace(vector(1), \"job\", \"postgres-runs-ai-analyzer\", \"\", \"\") or label_replace(vector(1), \"job\", \"postgres-runsapp\", \"\", \"\") or label_replace(vector(1), \"job\", \"postgres-sequences-runs-ai-analyzer\", \"\", \"\") or label_replace(vector(1), \"job\", \"postgres-sequences-runsapp\", \"\", \"\") or label_replace(vector(1), \"job\", \"prometheus\", \"\", \"\") or label_replace(vector(1), \"job\", \"rabbitmq\", \"\", \"\") or label_replace(vector(1), \"job\", \"rabbitmq-node\", \"\", \"\") or label_replace(vector(1), \"job\", \"runs-server\", \"\", \"\")))), \"target\", \"$1\", \"job\", \"(.*)\"))), \"Check\", \"Expected scrape target missing\", \"\", \"\"), \"Action\", \"Compare Prometheus Targets with expected counts from your supplied configuration\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_replace((2 * ((label_replace(vector(1), \"job\", \"runs-server\", \"\", \"\") or label_replace(vector(1), \"job\", \"mac13-server\", \"\", \"\")) unless on(job) node_memory_MemAvailable_bytes{job=~\"runs-server|mac13-server\"})), \"target\", \"$1\", \"job\", \"(.*)\"))), \"Check\", \"Missing host memory metrics\", \"\", \"\"), \"Action\", \"Check Node Exporter target and collector; do not infer healthy memory from absent data\", \"\", \"\")) or (label_replace(label_replace((max by(target) (label_join((2 * ((label_replace(label_replace(vector(1), \"instance\", \"runsapp-db\", \"\", \"\"), \"datname\", \"dbcleaner\", \"\", \"\") or label_replace(label_replace(vector(1), \"instance\", \"runsapp-db\", \"\", \"\"), \"datname\", \"event-service\", \"\", \"\") or label_replace(label_replace(vector(1), \"instance\", \"runsapp-db\", \"\", \"\"), \"datname\", \"litellm\", \"\", \"\") or label_replace(label_replace(vector(1), \"instance\", \"runsapp-db\", \"\", \"\"), \"datname\", \"my-github-cleaner\", \"\", \"\") or label_replace(label_replace(vector(1), \"instance\", \"runsapp-db\", \"\", \"\"), \"datname\", \"runsapp_db\", \"\", \"\") or label_replace(label_replace(vector(1), \"instance\", \"runsapp-db\", \"\", \"\"), \"datname\", \"sathishlogger\", \"\", \"\") or label_replace(label_replace(vector(1), \"instance\", \"runs-ai-analyzer-db\", \"\", \"\"), \"datname\", \"runs_ai_analyzer_db\", \"\", \"\")) unless on(instance,datname) (pg_stat_database_numbackends{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\",datname!~\"postgres|template0|template1|\"} and on(job,instance) (up{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\"} == 1)))), \"target\", \" / \", \"instance\", \"datname\"))), \"Check\", \"Missing database activity metrics\", \"\", \"\"), \"Action\", \"Inspect database exporter permissions and coverage for this known database\", \"\", \"\"))) > 0)))",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "refId": "A",
+          "legendFormat": "{{target}}"
+        }
+      ],
+      "description": "Sorted current rule findings for the whole configured estate. Critical=3, warning/missing metrics=2, review=1. Multiple findings can describe the same underlying problem. Gray error/no-data states are not green. No alert rules or notifications are created by importing this dashboard.",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#73BF69",
+                "value": null
+              },
+              {
+                "color": "#FADE2A",
+                "value": 1
+              },
+              {
+                "color": "#FF9830",
+                "value": 2
+              },
+              {
+                "color": "#F2495C",
+                "value": 3
+              }
+            ]
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Priority"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "NORMAL",
+                        "color": "#73BF69"
+                      },
+                      "1": {
+                        "text": "REVIEW",
+                        "color": "#FADE2A"
+                      },
+                      "2": {
+                        "text": "WARNING",
+                        "color": "#FF9830"
+                      },
+                      "3": {
+                        "text": "CRITICAL",
+                        "color": "#F2495C"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.width",
+                "value": 120
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Check"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 260
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "target"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Target"
+              },
+              {
+                "id": "custom.width",
+                "value": 280
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "lg",
+        "footer": {
+          "show": false
+        },
+        "sortBy": [
+          {
+            "displayName": "Priority",
+            "desc": true
+          }
+        ]
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true
+            },
+            "indexByName": {
+              "Value": 0,
+              "Check": 1,
+              "target": 2,
+              "Action": 3
+            },
+            "renameByName": {}
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "field": "Value",
+                "desc": true
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": 43,
+      "title": "How the attention view works",
+      "type": "text",
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "w": 24,
+        "h": 5
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "**Automatic priority ordering:** this table reevaluates at every refresh and sorts current findings with critical first, then warning, then review. Detailed panels stay in stable positions. The Hosts and Databases filters affect detail panels, not this attention board.\n\n**Starting rules:** disk 70% review / 80% warning / 90% critical; CPU 10-minute average 80% warning / 95% critical; memory used 85% warning / 95% critical; no passing application probe or successful scrape in the last 2 minutes is critical; rollback share >=10% over 10 minutes with total transaction rate >=0.1/s is a review item. Possible DLQ backlog is a review item: a queue name alone does not prove failure. Missing expected monitoring results are warnings.\n\n**Interpretation:** these are explicit starting thresholds and time-window checks. Baseline learning is not configured. Historical collection gaps are not proof of application downtime. Notification delivery, backup freshness, and photo-storage integrity are not evaluated. Importing this JSON does not install alert rules or email routes. Numeric counts refer to findings, not unique incidents.\n\nIf the attention table reports a query-length or HTTP 414 error, set this Prometheus data source HTTP method to POST (Grafana default). Detailed charts retain their existing queries."
+      }
+    },
+    {
+      "id": 1,
+      "title": "Start here \u2014 scope and interpretation",
+      "type": "text",
+      "gridPos": {
+        "x": 0,
+        "y": 21,
+        "w": 24,
+        "h": 5
+      },
+      "description": "",
+      "options": {
+        "mode": "markdown",
+        "content": "Select the **Prometheus data source connected to your local runs-server** during import. This overview uses the job names in your supplied Targets snapshot: **18 scrape targets across 13 jobs**, including two hosts and six application probes. The snapshot confirms collection, not full application health.\n\n**PASS / FAILED** below reflect configured application probes or exporter-reported database connectivity. **NO METRICS / NO DATA** mean missing measurements, not proof of downtime. The host filter affects host panels; the database filter affects database panels. Rates need at least two samples. Panel thresholds are visual aids, not notification rules. Detailed HTTP/JVM metrics, logs, backups, and sequence metrics need separate validation."
+      }
+    },
+    {
+      "id": 2,
+      "title": "1 \u00b7 Collection and application checks",
+      "type": "row",
+      "gridPos": {
+        "x": 0,
+        "y": 26,
+        "w": 24,
+        "h": 1
+      },
+      "description": "",
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 3,
+      "title": "Targets currently scraped",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 27,
+        "w": 6,
+        "h": 4
+      },
+      "description": "Live count from the selected data source. Your supplied snapshot contained 18 targets; this count can change.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "count(up)",
+          "refId": "A",
+          "legendFormat": "",
+          "range": false,
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#73BF69",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "Scrape targets failing",
+      "type": "stat",
+      "gridPos": {
+        "x": 6,
+        "y": 27,
+        "w": 6,
+        "h": 4
+      },
+      "description": "0 means every target currently present in up is scraping. Removed or absent targets require expected-target alerts.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "sum(1 - up)",
+          "refId": "A",
+          "legendFormat": "",
+          "range": false,
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#73BF69",
+                "value": null
+              },
+              {
+                "color": "#F2495C",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "Application probe failures",
+      "type": "stat",
+      "gridPos": {
+        "x": 12,
+        "y": 27,
+        "w": 6,
+        "h": 4
+      },
+      "description": "Count of failed probes that report a result. Inspect the per-application cards for missing probes.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "sum(1 - probe_success{job=\"blackbox-health\"})",
+          "refId": "A",
+          "legendFormat": "",
+          "range": false,
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#73BF69",
+                "value": null
+              },
+              {
+                "color": "#F2495C",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        }
+      }
+    },
+    {
+      "id": 6,
+      "title": "Alertmanager scrape",
+      "type": "stat",
+      "gridPos": {
+        "x": 18,
+        "y": 27,
+        "w": 6,
+        "h": 4
+      },
+      "description": "PASS means Prometheus scraped Alertmanager. It does not verify email delivery.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "up{job=\"alertmanager\"}",
+          "refId": "A",
+          "legendFormat": "Alertmanager",
+          "range": false,
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "FAILED",
+                  "color": "#F2495C"
+                },
+                "1": {
+                  "text": "PASS",
+                  "color": "#73BF69"
+                },
+                "2": {
+                  "text": "NO METRICS",
+                  "color": "#FF9830"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#73BF69",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        }
+      }
+    },
+    {
+      "id": 7,
+      "title": "Application checks \u2014 six configured endpoints",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 31,
+        "w": 12,
+        "h": 6
+      },
+      "description": "1 configured probe passed; 0 failed; 2 no current probe result. These are the six observed checks, not every installed application.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "max by(app) (probe_success{job=\"blackbox-health\"} and on(job,instance) (up{job=\"blackbox-health\"} == 1)) or on(app) (2 * (label_replace(vector(1), \"app\", \"nextcloud\", \"\", \"\") or label_replace(vector(1), \"app\", \"immich\", \"\", \"\") or label_replace(vector(1), \"app\", \"runs-app\", \"\", \"\") or label_replace(vector(1), \"app\", \"runs-ai-analyzer\", \"\", \"\") or label_replace(vector(1), \"app\", \"eventstracker\", \"\", \"\") or label_replace(vector(1), \"app\", \"sathishlogger\", \"\", \"\")))",
+          "refId": "A",
+          "legendFormat": "{{app}}",
+          "range": false,
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "FAILED",
+                  "color": "#F2495C"
+                },
+                "1": {
+                  "text": "PASS",
+                  "color": "#73BF69"
+                },
+                "2": {
+                  "text": "NO METRICS",
+                  "color": "#FF9830"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#73BF69",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        }
+      }
+    },
+    {
+      "id": 8,
+      "title": "Probe duration",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 31,
+        "w": 12,
+        "h": 6
+      },
+      "description": "Duration of the configured probe, including failed attempts. Not a complete application request-latency measurement. Series colors identify applications; use attention findings for priority. No universal latency failure threshold is assumed.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "probe_duration_seconds{job=\"blackbox-health\"}",
+          "refId": "A",
+          "legendFormat": "{{app}}",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#5794F2"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#73BF69",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "spanNulls": false,
+            "showPoints": "never",
+            "axisCenteredZero": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "nextcloud"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5794F2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "immich"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#8AB8FF"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "runs-app"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B877D9"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "runs-ai-analyzer"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#C3A6E8"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "eventstracker"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#6ED0E0"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "sathishlogger"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#A8E5EE"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "sortBy": "Last *",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 9,
+      "title": "2 \u00b7 Hosts \u2014 runs-server and mac13-server",
+      "type": "row",
+      "gridPos": {
+        "x": 0,
+        "y": 37,
+        "w": 24,
+        "h": 1
+      },
+      "description": "",
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 10,
+      "title": "CPU busy now",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 38,
+        "w": 6,
+        "h": 5
+      },
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "100 * (1 - avg by(job) (rate(node_cpu_seconds_total{job=~\"${host:regex}\",mode=\"idle\"}[$__rate_interval])))",
+          "refId": "A",
+          "legendFormat": "{{job}}",
+          "range": false,
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#73BF69",
+                "value": null
+              },
+              {
+                "color": "#FF9830",
+                "value": 80
+              },
+              {
+                "color": "#F2495C",
+                "value": 95
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        }
+      }
+    },
+    {
+      "id": 11,
+      "title": "Memory used",
+      "type": "stat",
+      "gridPos": {
+        "x": 6,
+        "y": 38,
+        "w": 6,
+        "h": 5
+      },
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "max by(job) (100 * (1 - node_memory_MemAvailable_bytes{job=~\"${host:regex}\"} / node_memory_MemTotal_bytes{job=~\"${host:regex}\"}))",
+          "refId": "A",
+          "legendFormat": "{{job}}",
+          "range": false,
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#73BF69",
+                "value": null
+              },
+              {
+                "color": "#FF9830",
+                "value": 85
+              },
+              {
+                "color": "#F2495C",
+                "value": 95
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        }
+      }
+    },
+    {
+      "id": 12,
+      "title": "Root disk used",
+      "type": "stat",
+      "gridPos": {
+        "x": 12,
+        "y": 38,
+        "w": 6,
+        "h": 5
+      },
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "max by(job) (100 * (1 - node_filesystem_avail_bytes{job=~\"${host:regex}\",mountpoint=\"/\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs\"} / node_filesystem_size_bytes{job=~\"${host:regex}\",mountpoint=\"/\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs\"}))",
+          "refId": "A",
+          "legendFormat": "{{job}}",
+          "range": false,
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#73BF69",
+                "value": null
+              },
+              {
+                "color": "#FADE2A",
+                "value": 70
+              },
+              {
+                "color": "#FF9830",
+                "value": 80
+              },
+              {
+                "color": "#F2495C",
+                "value": 90
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        }
+      }
+    },
+    {
+      "id": 13,
+      "title": "Host uptime",
+      "type": "stat",
+      "gridPos": {
+        "x": 18,
+        "y": 38,
+        "w": 6,
+        "h": 5
+      },
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "max by(job) (time() - node_boot_time_seconds{job=~\"${host:regex}\"})",
+          "refId": "A",
+          "legendFormat": "{{job}}",
+          "range": false,
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#73BF69",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        }
+      }
+    },
+    {
+      "id": 14,
+      "title": "CPU trend",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 43,
+        "w": 12,
+        "h": 7
+      },
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "100 * (1 - avg by(job) (rate(node_cpu_seconds_total{job=~\"${host:regex}\",mode=\"idle\"}[$__rate_interval])))",
+          "refId": "A",
+          "legendFormat": "{{job}}",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#73BF69",
+                "value": null
+              },
+              {
+                "color": "#FF9830",
+                "value": 80
+              },
+              {
+                "color": "#F2495C",
+                "value": 95
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "spanNulls": false,
+            "showPoints": "never",
+            "axisCenteredZero": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "gradientMode": "scheme",
+            "thresholdsStyle": {
+              "mode": "line+area"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "sortBy": "Last *",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 15,
+      "title": "Memory available",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 43,
+        "w": 12,
+        "h": 7
+      },
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "node_memory_MemAvailable_bytes{job=~\"${host:regex}\"}",
+          "refId": "A",
+          "legendFormat": "{{job}}",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#5794F2"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#73BF69",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "spanNulls": false,
+            "showPoints": "never",
+            "axisCenteredZero": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "runs-server"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5794F2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "mac13-server"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B877D9"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "sortBy": "Last *",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 16,
+      "title": "Filesystem usage by mount",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 50,
+        "w": 12,
+        "h": 7
+      },
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "100 * (1 - node_filesystem_avail_bytes{job=~\"${host:regex}\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs|nsfs|autofs\",mountpoint!~\"/run.*|/var/lib/docker/.*\"} / node_filesystem_size_bytes{job=~\"${host:regex}\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs|nsfs|autofs\",mountpoint!~\"/run.*|/var/lib/docker/.*\"})",
+          "refId": "A",
+          "legendFormat": "{{job}} {{mountpoint}}",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#73BF69",
+                "value": null
+              },
+              {
+                "color": "#FADE2A",
+                "value": 70
+              },
+              {
+                "color": "#FF9830",
+                "value": 80
+              },
+              {
+                "color": "#F2495C",
+                "value": 90
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "spanNulls": false,
+            "showPoints": "never",
+            "axisCenteredZero": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "gradientMode": "scheme",
+            "thresholdsStyle": {
+              "mode": "line+area"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "sortBy": "Last *",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 17,
+      "title": "Network received",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 50,
+        "w": 12,
+        "h": 7
+      },
+      "description": "Receive throughput summed over non-container interfaces; VPN and physical traffic can overlap.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "sum by(job) (rate(node_network_receive_bytes_total{job=~\"${host:regex}\",device!~\"lo|veth.*|docker.*|br-.*\"}[$__rate_interval]))",
+          "refId": "A",
+          "legendFormat": "{{job}}",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#5794F2"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#73BF69",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "spanNulls": false,
+            "showPoints": "never",
+            "axisCenteredZero": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "runs-server"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5794F2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "mac13-server"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B877D9"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "sortBy": "Last *",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 18,
+      "title": "3 \u00b7 Docker application resources on runs-server",
+      "type": "row",
+      "gridPos": {
+        "x": 0,
+        "y": 57,
+        "w": 24,
+        "h": 1
+      },
+      "description": "",
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 19,
+      "title": "Container CPU \u2014 percent of one core",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 58,
+        "w": 12,
+        "h": 8
+      },
+      "description": "100% means one full CPU core; multithreaded containers can exceed 100%.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "100 * sum by(name) (rate(container_cpu_usage_seconds_total{job=\"cadvisor\",image!=\"\",name!=\"\"}[$__rate_interval]))",
+          "refId": "A",
+          "legendFormat": "{{name}}",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#5794F2"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#73BF69",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "spanNulls": false,
+            "showPoints": "never",
+            "axisCenteredZero": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "portainer"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5794F2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "runs-app"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B877D9"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "runs-ai-analyzer"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#6ED0E0"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "eventstracker"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#8AB8FF"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "dbcleaner"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9F90FF"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "sathishlogger"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3E9CAF"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "rabbitmq"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#A1A7B5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "runs-ai-analyzer-db"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#806EB7"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "config-server"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#0A879C"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "watchtower"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#74B3CE"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "cadvisor"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#C3A6E8"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "diagram-maker"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5A7EA6"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "alloy"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9DA9CF"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "loki"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#65A6B0"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "sortBy": "Last *",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 20,
+      "title": "Container working-set memory",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 58,
+        "w": 12,
+        "h": 8
+      },
+      "description": "Container resource data is not an application health check. Empty panels may indicate different cAdvisor label configuration.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "sum by(name) (container_memory_working_set_bytes{job=\"cadvisor\",image!=\"\",name!=\"\"})",
+          "refId": "A",
+          "legendFormat": "{{name}}",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#5794F2"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#73BF69",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "spanNulls": false,
+            "showPoints": "never",
+            "axisCenteredZero": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "portainer"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5794F2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "runs-app"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B877D9"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "runs-ai-analyzer"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#6ED0E0"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "eventstracker"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#8AB8FF"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "dbcleaner"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9F90FF"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "sathishlogger"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3E9CAF"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "rabbitmq"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#A1A7B5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "runs-ai-analyzer-db"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#806EB7"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "config-server"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#0A879C"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "watchtower"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#74B3CE"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "cadvisor"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#C3A6E8"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "diagram-maker"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5A7EA6"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "alloy"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9DA9CF"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "loki"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#65A6B0"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "sortBy": "Last *",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 21,
+      "title": "4 \u00b7 PostgreSQL \u2014 connectivity and database coverage",
+      "type": "row",
+      "gridPos": {
+        "x": 0,
+        "y": 66,
+        "w": 24,
+        "h": 1
+      },
+      "description": "",
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 22,
+      "title": "Database-server connectivity",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 67,
+        "w": 8,
+        "h": 6
+      },
+      "description": "Exporter-reported PostgreSQL connectivity, not overall DB health. Sequence exporters are excluded to avoid duplicate reporting.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "max by(instance) (pg_up{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\"} and on(job,instance) (up{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\"} == 1)) or on(instance) (2 * (label_replace(vector(1), \"instance\", \"runsapp-db\", \"\", \"\") or label_replace(vector(1), \"instance\", \"runs-ai-analyzer-db\", \"\", \"\")))",
+          "refId": "A",
+          "legendFormat": "{{instance}}",
+          "range": false,
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "FAILED",
+                  "color": "#F2495C"
+                },
+                "1": {
+                  "text": "PASS",
+                  "color": "#73BF69"
+                },
+                "2": {
+                  "text": "NO METRICS",
+                  "color": "#FF9830"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#73BF69",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        }
+      }
+    },
+    {
+      "id": 23,
+      "title": "Seven expected databases \u2014 metric coverage",
+      "type": "stat",
+      "gridPos": {
+        "x": 8,
+        "y": 67,
+        "w": 16,
+        "h": 6
+      },
+      "description": "Shows whether each known application database emits a connection metric. Missing metrics can reflect collector permissions/configuration; this is not a database-down test. Inventory was supplied on 2026-10-25.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "(count by(instance,datname) (pg_stat_database_numbackends{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\",datname!~\"postgres|template0|template1|\"}) > bool 0) or on(instance,datname) (0 * (label_replace(label_replace(vector(1), \"instance\", \"runsapp-db\", \"\", \"\"), \"datname\", \"dbcleaner\", \"\", \"\") or label_replace(label_replace(vector(1), \"instance\", \"runsapp-db\", \"\", \"\"), \"datname\", \"event-service\", \"\", \"\") or label_replace(label_replace(vector(1), \"instance\", \"runsapp-db\", \"\", \"\"), \"datname\", \"litellm\", \"\", \"\") or label_replace(label_replace(vector(1), \"instance\", \"runsapp-db\", \"\", \"\"), \"datname\", \"my-github-cleaner\", \"\", \"\") or label_replace(label_replace(vector(1), \"instance\", \"runsapp-db\", \"\", \"\"), \"datname\", \"runsapp_db\", \"\", \"\") or label_replace(label_replace(vector(1), \"instance\", \"runsapp-db\", \"\", \"\"), \"datname\", \"sathishlogger\", \"\", \"\") or label_replace(label_replace(vector(1), \"instance\", \"runs-ai-analyzer-db\", \"\", \"\"), \"datname\", \"runs_ai_analyzer_db\", \"\", \"\")))",
+          "refId": "A",
+          "legendFormat": "{{instance}} / {{datname}}",
+          "range": false,
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "NO CONNECTION METRIC",
+                  "color": "#FF9830"
+                },
+                "1": {
+                  "text": "METRIC PRESENT",
+                  "color": "#73BF69"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#73BF69",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        }
+      }
+    },
+    {
+      "id": 24,
+      "title": "Database sizes",
+      "type": "bargauge",
+      "gridPos": {
+        "x": 0,
+        "y": 73,
+        "w": 12,
+        "h": 8
+      },
+      "description": "Requires a database-size collector exposing pg_database_size_bytes. NO DATA may require matching your exporter metric name or enabling its collector. Bar lengths compare database sizes; green does not indicate remaining disk capacity.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "max by(instance,datname) (pg_database_size_bytes{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\",datname=~\"${database:regex}\",datname!~\"postgres|template0|template1|\"})",
+          "refId": "A",
+          "legendFormat": "{{instance}} / {{datname}}",
+          "range": false,
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#73BF69",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true,
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        }
+      }
+    },
+    {
+      "id": 25,
+      "title": "Current database connections",
+      "type": "bargauge",
+      "gridPos": {
+        "x": 12,
+        "y": 73,
+        "w": 12,
+        "h": 8
+      },
+      "description": "Connections include monitoring sessions; a quiet database can have zero application connections. No connection limit is assumed; these bars are descriptive, not saturation alerts.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "max by(instance,datname) (pg_stat_database_numbackends{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\",datname=~\"${database:regex}\",datname!~\"postgres|template0|template1|\"})",
+          "refId": "A",
+          "legendFormat": "{{instance}} / {{datname}}",
+          "range": false,
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#73BF69",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true,
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        }
+      }
+    },
+    {
+      "id": 26,
+      "title": "Committed transactions / second",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 81,
+        "w": 12,
+        "h": 7
+      },
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "sum by(instance,datname) (rate(pg_stat_database_xact_commit{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\",datname=~\"${database:regex}\",datname!~\"postgres|template0|template1|\"}[$__rate_interval]))",
+          "refId": "A",
+          "legendFormat": "{{instance}} / {{datname}}",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#5794F2"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#73BF69",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "spanNulls": false,
+            "showPoints": "never",
+            "axisCenteredZero": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "runsapp-db / dbcleaner"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5794F2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "runsapp-db / event-service"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B877D9"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "runsapp-db / litellm"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#6ED0E0"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "runsapp-db / my-github-cleaner"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#8AB8FF"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "runsapp-db / runsapp_db"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9F90FF"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "runsapp-db / sathishlogger"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3E9CAF"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "runs-ai-analyzer-db / runs_ai_analyzer_db"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#A1A7B5"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "sortBy": "Last *",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 27,
+      "title": "Rolled-back transactions / second",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 81,
+        "w": 12,
+        "h": 7
+      },
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "sum by(instance,datname) (rate(pg_stat_database_xact_rollback{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\",datname=~\"${database:regex}\",datname!~\"postgres|template0|template1|\"}[$__rate_interval]))",
+          "refId": "A",
+          "legendFormat": "{{instance}} / {{datname}}",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#5794F2"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#73BF69",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "spanNulls": false,
+            "showPoints": "never",
+            "axisCenteredZero": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "runsapp-db / dbcleaner"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5794F2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "runsapp-db / event-service"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B877D9"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "runsapp-db / litellm"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#6ED0E0"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "runsapp-db / my-github-cleaner"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#8AB8FF"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "runsapp-db / runsapp_db"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9F90FF"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "runsapp-db / sathishlogger"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3E9CAF"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "runs-ai-analyzer-db / runs_ai_analyzer_db"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#A1A7B5"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "sortBy": "Last *",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 28,
+      "title": "Deadlocks in selected time range",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 88,
+        "w": 12,
+        "h": 5
+      },
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "sum by(instance,datname) (increase(pg_stat_database_deadlocks{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\",datname=~\"${database:regex}\",datname!~\"postgres|template0|template1|\"}[$__range]))",
+          "refId": "A",
+          "legendFormat": "{{instance}} / {{datname}}",
+          "range": false,
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#73BF69",
+                "value": null
+              },
+              {
+                "color": "#F2495C",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        }
+      }
+    },
+    {
+      "id": 29,
+      "title": "Temporary data written / second",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 88,
+        "w": 12,
+        "h": 5
+      },
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "sum by(instance,datname) (rate(pg_stat_database_temp_bytes{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\",datname=~\"${database:regex}\",datname!~\"postgres|template0|template1|\"}[$__rate_interval]))",
+          "refId": "A",
+          "legendFormat": "{{instance}} / {{datname}}",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#5794F2"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#73BF69",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "spanNulls": false,
+            "showPoints": "never",
+            "axisCenteredZero": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "runsapp-db / dbcleaner"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5794F2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "runsapp-db / event-service"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B877D9"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "runsapp-db / litellm"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#6ED0E0"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "runsapp-db / my-github-cleaner"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#8AB8FF"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "runsapp-db / runsapp_db"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9F90FF"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "runsapp-db / sathishlogger"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3E9CAF"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "runs-ai-analyzer-db / runs_ai_analyzer_db"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#A1A7B5"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "sortBy": "Last *",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 30,
+      "title": "5 \u00b7 RabbitMQ queues",
+      "type": "row",
+      "gridPos": {
+        "x": 0,
+        "y": 93,
+        "w": 24,
+        "h": 1
+      },
+      "description": "",
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 31,
+      "title": "Messages ready for delivery",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 94,
+        "w": 8,
+        "h": 7
+      },
+      "description": "Uses your existing detailed RabbitMQ job. NO DATA can mean no matching queues or missing metric families; inspect before interpreting. Queue series use neutral blue; priority is determined in the attention table.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "sum by(vhost,queue) (rabbitmq_detailed_queue_messages_ready{job=\"rabbitmq\"})",
+          "refId": "A",
+          "legendFormat": "{{vhost}} / {{queue}}",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#5794F2"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#73BF69",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "spanNulls": false,
+            "showPoints": "never",
+            "axisCenteredZero": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "sortBy": "Last *",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 32,
+      "title": "Delivered, not yet acknowledged",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 8,
+        "y": 94,
+        "w": 8,
+        "h": 7
+      },
+      "description": "Uses your existing detailed RabbitMQ job. NO DATA can mean no matching queues or missing metric families; inspect before interpreting. Queue series use neutral blue; priority is determined in the attention table.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "sum by(vhost,queue) (rabbitmq_detailed_queue_messages_unacked{job=\"rabbitmq\"})",
+          "refId": "A",
+          "legendFormat": "{{vhost}} / {{queue}}",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#5794F2"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#73BF69",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "spanNulls": false,
+            "showPoints": "never",
+            "axisCenteredZero": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "sortBy": "Last *",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 33,
+      "title": "Queue consumers",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 16,
+        "y": 94,
+        "w": 8,
+        "h": 7
+      },
+      "description": "Uses your existing detailed RabbitMQ job. NO DATA can mean no matching queues or missing metric families; inspect before interpreting. Queue series use neutral blue; priority is determined in the attention table.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "sum by(vhost,queue) (rabbitmq_detailed_queue_consumers{job=\"rabbitmq\"})",
+          "refId": "A",
+          "legendFormat": "{{vhost}} / {{queue}}",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#5794F2"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#73BF69",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "spanNulls": false,
+            "showPoints": "never",
+            "axisCenteredZero": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "sortBy": "Last *",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 34,
+      "title": "6 \u00b7 Monitoring diagnostics and remaining work",
+      "type": "row",
+      "gridPos": {
+        "x": 0,
+        "y": 101,
+        "w": 24,
+        "h": 1
+      },
+      "description": "",
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 35,
+      "title": "Scrape status by job and instance",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 102,
+        "w": 24,
+        "h": 7
+      },
+      "description": "Collection status only. Blackbox application checks and PostgreSQL connectivity are shown separately above.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "up",
+          "refId": "A",
+          "legendFormat": "{{job}} / {{instance}}",
+          "range": false,
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "FAILED",
+                  "color": "#F2495C"
+                },
+                "1": {
+                  "text": "PASS",
+                  "color": "#73BF69"
+                },
+                "2": {
+                  "text": "NO METRICS",
+                  "color": "#FF9830"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#73BF69",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        }
+      }
+    },
+    {
+      "id": 36,
+      "title": "Coverage gaps and next actions",
+      "type": "text",
+      "gridPos": {
+        "x": 0,
+        "y": 109,
+        "w": 24,
+        "h": 9
+      },
+      "description": "",
+      "options": {
+        "mode": "markdown",
+        "content": "**Already configured in your supplied Targets page:** both host exporters; cAdvisor and Docker; two primary PostgreSQL exporters plus two separate sequence exporters; six application probes; RabbitMQ detailed/node metrics; Prometheus and Alertmanager.\n\n**Not established by the snapshot:** email delivery, backup freshness, log ingestion, SQL query performance, locks/waits, JDBC pool saturation, and full Spring request/JVM metrics. Loki/Alloy running does not prove logs arrive. Custom sequence panels need their actual metric names. This dashboard adds no alert rules or notification routes.\n\n**Application probe gaps:** the supplied six probes do not include dbcleaner, config-server, diagram-maker, LiteLLM, or Portainer. Their container/system processes may run without an endpoint check. Add checks appropriate to their actual endpoints after verifying them.\n\n**Database inventory:** host 5432 contains dbcleaner, event-service, litellm, my-github-cleaner, runsapp_db, sathishlogger. Docker host 5444 contains runs_ai_analyzer_db. Names in a listing do not prove exporter coverage; use the seven-database coverage panel above.\n\n**If a panel is empty:** first confirm this dashboard uses the local runs-server Prometheus data source. Then open the panel's Explore query and inspect the available metric names. Do not map missing measurements to a healthy zero. Query rates need multiple samples. A saved JSON file has been structurally checked, but live rendering and data compatibility must be verified after import."
+      }
+    },
+    {
+      "id": 44,
+      "title": "Rollback share \u2014 review above 10 percent",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 118,
+        "w": 24,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "(100 * (sum by(instance,datname) (rate(pg_stat_database_xact_rollback{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\",datname!~\"postgres|template0|template1|\"}[10m]))) / clamp_min(((sum by(instance,datname) (rate(pg_stat_database_xact_rollback{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\",datname!~\"postgres|template0|template1|\"}[10m]))) + (sum by(instance,datname) (rate(pg_stat_database_xact_commit{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\",datname!~\"postgres|template0|template1|\"}[10m])))), 0.000001)) and on(instance,datname) (((sum by(instance,datname) (rate(pg_stat_database_xact_rollback{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\",datname!~\"postgres|template0|template1|\"}[10m]))) + (sum by(instance,datname) (rate(pg_stat_database_xact_commit{job=~\"postgres-runsapp|postgres-runs-ai-analyzer\",datname!~\"postgres|template0|template1|\"}[10m])))) >= 0.1)",
+          "instant": false,
+          "range": true,
+          "refId": "A",
+          "legendFormat": "{{instance}} / {{datname}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#73BF69",
+                "value": null
+              },
+              {
+                "color": "#FADE2A",
+                "value": 10
+              }
+            ]
+          },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "spanNulls": false,
+            "gradientMode": "scheme",
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "description": "10-minute rolled-back transactions divided by commits plus rollbacks. Only databases averaging at least 0.1 transactions/s are shown. Intentional rollbacks exist; this is a review threshold, not proof of application failure."
+    }
+  ]
+}
