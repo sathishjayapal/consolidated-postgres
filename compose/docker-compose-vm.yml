@@ -44,6 +44,7 @@ services:
   # Exception: runs-ai-analyzer-db (Docker with pgvector) — extension easier in container
 
   runs-ai-analyzer-db:
+    container_name: sathish-stack-runs-ai-analyzer-db
     image: pgvector/pgvector:pg17
     restart: unless-stopped
     environment:
@@ -68,6 +69,7 @@ services:
   #  pass verbose-barnacle to vm-db-up.sh to include it)
 
   rabbitmq:
+    container_name: sathish-stack-rabbitmq
     image: rabbitmq:3-management-alpine
     restart: unless-stopped
     environment:
@@ -87,6 +89,7 @@ services:
       retries: 5
 # ── Application Services ────────────────────────────────────────────────────
   config-server:
+    container_name: sathish-stack-config-server
     image: travelhelper0h/sathishproject-config-server:latest
     restart: unless-stopped
     ports:
@@ -114,6 +117,7 @@ services:
       start_period: 40s
 
   sathishlogger:
+    container_name: sathish-stack-sathishlogger
     image: travelhelper0h/sathishlogger:latest
     restart: unless-stopped
     ports:
@@ -140,6 +144,7 @@ services:
       - sathish-net
 
   eventstracker:
+    container_name: sathish-stack-eventstracker
     image: travelhelper0h/eventstracker:latest
     restart: unless-stopped
     ports:
@@ -185,8 +190,15 @@ services:
         condition: service_healthy
     networks:
       - sathish-net
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -qO- http://localhost:9081/actuator/health >/dev/null 2>&1 || exit 1" ]
+      interval: 20s
+      timeout: 5s
+      retries: 6
+      start_period: 90s
 
   dbcleaner:
+    container_name: sathish-stack-dbcleaner
     image: travelhelper0h/dbcleaner:latest
     restart: unless-stopped
     ports:
@@ -230,6 +242,7 @@ services:
       start_period: 60s
 
   runs-app:
+    container_name: sathish-stack-runs-app
     image: ghcr.io/sathishjayapal/runs-app:latest
     restart: unless-stopped
     ports:
@@ -308,6 +321,7 @@ services:
       start_period: 60s
 
   github-cleaner:
+    container_name: sathish-stack-github-cleaner
     image: ghcr.io/sathishjayapal/verbose-barnacle:latest
     restart: unless-stopped
     ports:
@@ -336,7 +350,7 @@ services:
       githubusername: ${GITHUB_USERNAME}
       githuborgkey: ${GITHUB_ORG_KEY}
       # EventTracker integration (raw env names the code expects)
-      EVENTSTRACKER_URL: http://eventstracker:8085
+      EVENTSTRACKER_URL: http://eventstracker:9081
       eventstracker_username: ${EVENTSTRACKER_USERNAME}
       eventstracker_password: ${EVENTSTRACKER_PASSWORD}
     depends_on:
@@ -356,6 +370,7 @@ services:
       start_period: 90s
 
   runs-ai-analyzer:
+    container_name: sathish-stack-runs-ai-analyzer
     image: ghcr.io/sathishjayapal/runs-ai-analyzer:latest
     restart: unless-stopped
     ports:
@@ -406,6 +421,7 @@ services:
   # deliberately by checking https://hub.docker.com/r/nickfedor/watchtower/tags.
 
   watchtower:
+    container_name: sathish-stack-watchtower
     image: nickfedor/watchtower:1.20.3
     restart: unless-stopped
     volumes:
@@ -428,6 +444,7 @@ services:
   # registration entirely, silently degrading to raw-cgroup-only metrics with no
   # container name/label data — which is what broke the ContainerDown alert.
   cadvisor:
+    container_name: sathish-stack-cadvisor
     image: ghcr.io/google/cadvisor:0.60.5
     restart: unless-stopped
     privileged: true
