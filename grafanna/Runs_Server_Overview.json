@@ -61,7 +61,7 @@
   ],
   "id": null,
   "uid": null,
-  "title": "Runs Server \u00b7 Attention First",
+  "title": "Runs Server · Attention First",
   "description": "Attention-first overview using current threshold findings and missing-data checks. Rule-based priority sorting; no notification rules are provisioned.",
   "tags": [
     "runs-server",
@@ -186,7 +186,7 @@
   "panels": [
     {
       "id": 37,
-      "title": "0 \u00b7 Attention first",
+      "title": "0 · Attention first",
       "type": "row",
       "gridPos": {
         "x": 0,
@@ -456,7 +456,7 @@
     },
     {
       "id": 42,
-      "title": "Needs attention \u2014 highest priority first",
+      "title": "Needs attention — highest priority first",
       "type": "table",
       "gridPos": {
         "x": 0,
@@ -644,43 +644,12 @@
       ]
     },
     {
-      "id": 43,
-      "title": "How the attention view works",
-      "type": "text",
-      "gridPos": {
-        "x": 0,
-        "y": 16,
-        "w": 24,
-        "h": 5
-      },
-      "options": {
-        "mode": "markdown",
-        "content": "**Automatic priority ordering:** this table reevaluates at every refresh and sorts current findings with critical first, then warning, then review. Detailed panels stay in stable positions. The Hosts and Databases filters affect detail panels, not this attention board.\n\n**Starting rules:** disk 70% review / 80% warning / 90% critical; CPU 10-minute average 80% warning / 95% critical; memory used 85% warning / 95% critical; no passing application probe or successful scrape in the last 2 minutes is critical; rollback share >=10% over 10 minutes with total transaction rate >=0.1/s is a review item. Possible DLQ backlog is a review item: a queue name alone does not prove failure. Missing expected monitoring results are warnings.\n\n**Interpretation:** these are explicit starting thresholds and time-window checks. Baseline learning is not configured. Historical collection gaps are not proof of application downtime. Notification delivery, backup freshness, and photo-storage integrity are not evaluated. Importing this JSON does not install alert rules or email routes. Numeric counts refer to findings, not unique incidents.\n\nIf the attention table reports a query-length or HTTP 414 error, set this Prometheus data source HTTP method to POST (Grafana default). Detailed charts retain their existing queries."
-      }
-    },
-    {
-      "id": 1,
-      "title": "Start here \u2014 scope and interpretation",
-      "type": "text",
-      "gridPos": {
-        "x": 0,
-        "y": 21,
-        "w": 24,
-        "h": 5
-      },
-      "description": "",
-      "options": {
-        "mode": "markdown",
-        "content": "Select the **Prometheus data source connected to your local runs-server** during import. This overview uses the job names in your supplied Targets snapshot: **18 scrape targets across 13 jobs**, including two hosts and six application probes. The snapshot confirms collection, not full application health.\n\n**PASS / FAILED** below reflect configured application probes or exporter-reported database connectivity. **NO METRICS / NO DATA** mean missing measurements, not proof of downtime. The host filter affects host panels; the database filter affects database panels. Rates need at least two samples. Panel thresholds are visual aids, not notification rules. Detailed HTTP/JVM metrics, logs, backups, and sequence metrics need separate validation."
-      }
-    },
-    {
       "id": 2,
-      "title": "1 \u00b7 Collection and application checks",
+      "title": "1 · Collection and application checks",
       "type": "row",
       "gridPos": {
         "x": 0,
-        "y": 26,
+        "y": 16,
         "w": 24,
         "h": 1
       },
@@ -694,7 +663,7 @@
       "type": "stat",
       "gridPos": {
         "x": 0,
-        "y": 27,
+        "y": 17,
         "w": 6,
         "h": 4
       },
@@ -759,7 +728,7 @@
       "type": "stat",
       "gridPos": {
         "x": 6,
-        "y": 27,
+        "y": 17,
         "w": 6,
         "h": 4
       },
@@ -828,7 +797,7 @@
       "type": "stat",
       "gridPos": {
         "x": 12,
-        "y": 27,
+        "y": 17,
         "w": 6,
         "h": 4
       },
@@ -897,7 +866,7 @@
       "type": "stat",
       "gridPos": {
         "x": 18,
-        "y": 27,
+        "y": 17,
         "w": 6,
         "h": 4
       },
@@ -976,11 +945,11 @@
     },
     {
       "id": 7,
-      "title": "Application checks \u2014 six configured endpoints",
+      "title": "Application checks — six configured endpoints",
       "type": "stat",
       "gridPos": {
         "x": 0,
-        "y": 31,
+        "y": 21,
         "w": 12,
         "h": 6
       },
@@ -1063,7 +1032,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 31,
+        "y": 21,
         "w": 12,
         "h": 6
       },
@@ -1230,11 +1199,11 @@
     },
     {
       "id": 9,
-      "title": "2 \u00b7 Hosts \u2014 runs-server and mac13-server",
+      "title": "2 · Hosts — runs-server and mac13-server",
       "type": "row",
       "gridPos": {
         "x": 0,
-        "y": 37,
+        "y": 27,
         "w": 24,
         "h": 1
       },
@@ -1248,7 +1217,7 @@
       "type": "stat",
       "gridPos": {
         "x": 0,
-        "y": 38,
+        "y": 28,
         "w": 6,
         "h": 5
       },
@@ -1321,7 +1290,7 @@
       "type": "stat",
       "gridPos": {
         "x": 6,
-        "y": 38,
+        "y": 28,
         "w": 6,
         "h": 5
       },
@@ -1394,7 +1363,7 @@
       "type": "stat",
       "gridPos": {
         "x": 12,
-        "y": 38,
+        "y": 28,
         "w": 6,
         "h": 5
       },
@@ -1471,7 +1440,7 @@
       "type": "stat",
       "gridPos": {
         "x": 18,
-        "y": 38,
+        "y": 28,
         "w": 6,
         "h": 5
       },
@@ -1536,7 +1505,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 43,
+        "y": 33,
         "w": 12,
         "h": 7
       },
@@ -1627,7 +1596,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 43,
+        "y": 33,
         "w": 12,
         "h": 7
       },
@@ -1738,7 +1707,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 50,
+        "y": 40,
         "w": 12,
         "h": 7
       },
@@ -1833,7 +1802,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 50,
+        "y": 40,
         "w": 12,
         "h": 7
       },
@@ -1940,11 +1909,11 @@
     },
     {
       "id": 18,
-      "title": "3 \u00b7 Docker application resources on runs-server",
+      "title": "3 · Docker application resources on runs-server",
       "type": "row",
       "gridPos": {
         "x": 0,
-        "y": 57,
+        "y": 47,
         "w": 24,
         "h": 1
       },
@@ -1954,11 +1923,11 @@
     },
     {
       "id": 19,
-      "title": "Container CPU \u2014 percent of one core",
+      "title": "Container CPU — percent of one core",
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 58,
+        "y": 48,
         "w": 12,
         "h": 8
       },
@@ -2249,7 +2218,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 58,
+        "y": 48,
         "w": 12,
         "h": 8
       },
@@ -2536,11 +2505,11 @@
     },
     {
       "id": 21,
-      "title": "4 \u00b7 PostgreSQL \u2014 connectivity and database coverage",
+      "title": "4 · PostgreSQL — connectivity and database coverage",
       "type": "row",
       "gridPos": {
         "x": 0,
-        "y": 66,
+        "y": 56,
         "w": 24,
         "h": 1
       },
@@ -2554,7 +2523,7 @@
       "type": "stat",
       "gridPos": {
         "x": 0,
-        "y": 67,
+        "y": 57,
         "w": 8,
         "h": 6
       },
@@ -2633,11 +2602,11 @@
     },
     {
       "id": 23,
-      "title": "Seven expected databases \u2014 metric coverage",
+      "title": "Seven expected databases — metric coverage",
       "type": "stat",
       "gridPos": {
         "x": 8,
-        "y": 67,
+        "y": 57,
         "w": 16,
         "h": 6
       },
@@ -2716,7 +2685,7 @@
       "type": "bargauge",
       "gridPos": {
         "x": 0,
-        "y": 73,
+        "y": 63,
         "w": 12,
         "h": 8
       },
@@ -2778,7 +2747,7 @@
       "type": "bargauge",
       "gridPos": {
         "x": 12,
-        "y": 73,
+        "y": 63,
         "w": 12,
         "h": 8
       },
@@ -2840,7 +2809,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 81,
+        "y": 71,
         "w": 12,
         "h": 7
       },
@@ -3026,7 +2995,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 81,
+        "y": 71,
         "w": 12,
         "h": 7
       },
@@ -3212,7 +3181,7 @@
       "type": "stat",
       "gridPos": {
         "x": 0,
-        "y": 88,
+        "y": 78,
         "w": 12,
         "h": 5
       },
@@ -3281,7 +3250,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 88,
+        "y": 78,
         "w": 12,
         "h": 5
       },
@@ -3463,11 +3432,11 @@
     },
     {
       "id": 30,
-      "title": "5 \u00b7 RabbitMQ queues",
+      "title": "5 · RabbitMQ queues",
       "type": "row",
       "gridPos": {
         "x": 0,
-        "y": 93,
+        "y": 83,
         "w": 24,
         "h": 1
       },
@@ -3481,7 +3450,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 94,
+        "y": 84,
         "w": 8,
         "h": 7
       },
@@ -3561,7 +3530,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 8,
-        "y": 94,
+        "y": 84,
         "w": 8,
         "h": 7
       },
@@ -3641,7 +3610,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 16,
-        "y": 94,
+        "y": 84,
         "w": 8,
         "h": 7
       },
@@ -3717,11 +3686,11 @@
     },
     {
       "id": 34,
-      "title": "6 \u00b7 Monitoring diagnostics and remaining work",
+      "title": "6 · Monitoring diagnostics and remaining work",
       "type": "row",
       "gridPos": {
         "x": 0,
-        "y": 101,
+        "y": 91,
         "w": 24,
         "h": 1
       },
@@ -3735,7 +3704,7 @@
       "type": "stat",
       "gridPos": {
         "x": 0,
-        "y": 102,
+        "y": 92,
         "w": 24,
         "h": 7
       },
@@ -3813,28 +3782,12 @@
       }
     },
     {
-      "id": 36,
-      "title": "Coverage gaps and next actions",
-      "type": "text",
-      "gridPos": {
-        "x": 0,
-        "y": 109,
-        "w": 24,
-        "h": 9
-      },
-      "description": "",
-      "options": {
-        "mode": "markdown",
-        "content": "**Already configured in your supplied Targets page:** both host exporters; cAdvisor and Docker; two primary PostgreSQL exporters plus two separate sequence exporters; six application probes; RabbitMQ detailed/node metrics; Prometheus and Alertmanager.\n\n**Not established by the snapshot:** email delivery, backup freshness, log ingestion, SQL query performance, locks/waits, JDBC pool saturation, and full Spring request/JVM metrics. Loki/Alloy running does not prove logs arrive. Custom sequence panels need their actual metric names. This dashboard adds no alert rules or notification routes.\n\n**Application probe gaps:** the supplied six probes do not include dbcleaner, config-server, diagram-maker, LiteLLM, or Portainer. Their container/system processes may run without an endpoint check. Add checks appropriate to their actual endpoints after verifying them.\n\n**Database inventory:** host 5432 contains dbcleaner, event-service, litellm, my-github-cleaner, runsapp_db, sathishlogger. Docker host 5444 contains runs_ai_analyzer_db. Names in a listing do not prove exporter coverage; use the seven-database coverage panel above.\n\n**If a panel is empty:** first confirm this dashboard uses the local runs-server Prometheus data source. Then open the panel's Explore query and inspect the available metric names. Do not map missing measurements to a healthy zero. Query rates need multiple samples. A saved JSON file has been structurally checked, but live rendering and data compatibility must be verified after import."
-      }
-    },
-    {
       "id": 44,
-      "title": "Rollback share \u2014 review above 10 percent",
+      "title": "Rollback share — review above 10 percent",
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 118,
+        "y": 99,
         "w": 24,
         "h": 7
       },
