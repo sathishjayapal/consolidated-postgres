@@ -78,6 +78,7 @@ services:
     ports:
       - "5672:5672"     # AMQP
       - "15672:15672"   # management UI
+      - "127.0.0.1:15692:15692"   # Prometheus metrics (rabbitmq_prometheus), host-local only
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     networks:
@@ -145,12 +146,15 @@ services:
 
   eventstracker:
     container_name: sathish-stack-eventstracker
-    image: travelhelper0h/eventstracker:latest
+    # GHCR image (eventstracker ci-cd.yml publishes here on master); the Docker Hub image is frozen.
+    image: ghcr.io/sathishjayapal/eventstracker:latest
     restart: unless-stopped
     ports:
       - "9081:9081"
     environment:
       SPRING_PROFILES_ACTIVE: prod
+      # Emit JSON logs with a top-level correlationId field (read by Alloy -> Loki)
+      LOGGING_STRUCTURED_FORMAT_CONSOLE: ecs
       # Force the app to listen on 9081 inside the container so it matches the
       # published port below. Without this the app relies on server.port coming
       # from the config-server git repo; if that's missing it defaults to 8080
