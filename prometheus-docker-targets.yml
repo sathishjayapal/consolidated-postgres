@@ -11,7 +11,10 @@ scrape_configs:
     metrics_path: '/sathishconfigserver/prometheus'
     basic_auth:
       username: 'cfg_local'
-      password: 'jjK0Xq3liYCfx9JeU1BF7MvEELBl82wP'
+      # No credential in this (public) repo: Prometheus reads it from a root-only file on the VM.
+      #   sudo install -d -m 750 -o root -g prometheus /etc/prometheus/secrets
+      #   write the password to /etc/prometheus/secrets/config-server.pw (no trailing newline), chmod 640, group prometheus
+      password_file: /etc/prometheus/secrets/config-server.pw
     static_configs:
       - targets: ['localhost:8888']
     scrape_interval: 15s
@@ -57,7 +60,10 @@ scrape_configs:
     metrics_path: '/api/metrics'
     basic_auth:
       username: 'sathish'
-      password: 'jjK0Xq3liYCfx9JeU1BF7MvEELBl82wP'
+      # No credential in this (public) repo: Prometheus reads it from a root-only file on the VM.
+      #   sudo install -d -m 750 -o root -g prometheus /etc/prometheus/secrets
+      #   write the password to /etc/prometheus/secrets/rabbitmq.pw (no trailing newline), chmod 640, group prometheus
+      password_file: /etc/prometheus/secrets/rabbitmq.pw
     static_configs:
       - targets: ['localhost:15672']
     scrape_interval: 30s
