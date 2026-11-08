@@ -378,8 +378,13 @@ services:
     container_name: sathish-stack-runs-ai-analyzer
     image: ghcr.io/sathishjayapal/runs-ai-analyzer:latest
     restart: unless-stopped
+    # Bound to the VM's loopback only. This service has no authentication of its own, and the old
+    # "8081:8081" mapping listened on every interface: internet scanners were reaching it (about 1,900
+    # probes in 7 days, Nov 2026). runs-app talks to it over the docker network
+    # (RUNS_AI_ANALYZER_URL=http://runs-ai-analyzer:8081), which this mapping does not affect.
+    # From your Mac use an SSH tunnel:  ssh -L 8081:localhost:8081 vm   then http://localhost:8081
     ports:
-      - "8081:8081"
+      - "127.0.0.1:8081:8081"
     environment:
       SPRING_PROFILES_ACTIVE: prod
       SERVER_PORT: 8081
