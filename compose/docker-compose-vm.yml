@@ -416,6 +416,14 @@ services:
       rabbitmq:
         condition: service_healthy
       # Removed: ollama dependency
+    # Linux Docker has no host.docker.internal by default. OLLAMA_BASE_URL points at the native Ollama on
+    # this VM (listening on :11434), so map the name to the host; without this every analysis failed with
+    # "host.docker.internal: Name does not resolve" (Nov 2026).
+    # Provider order is Anthropic -> ACG Ollama -> this Ollama. ANTHROPIC_API_KEY is not set here, so the
+    # Anthropic tier is disabled and local Ollama is the only one in use. To enable Anthropic, add
+    # ANTHROPIC_API_KEY under environment (from a Portainer stack variable, never in this file).
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - sathish-net
     healthcheck:
