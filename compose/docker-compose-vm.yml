@@ -402,6 +402,12 @@ services:
       OLLAMA_CHAT_MODEL: ${OLLAMA_CHAT_MODEL}
       OLLAMA_EMBEDDING_MODEL: ${OLLAMA_EMBEDDING_MODEL:-nomic-embed-text}
       RUNS_APP_BASE_URL: http://runs-app:8080
+      # Diagram generation through the diagram-maker MCP server (docker network, see the service below).
+      # initialized=false so the analyzer still starts when diagram-maker is down; the diagram endpoint
+      # then answers 502 instead of the whole analyzer failing to boot.
+      DIAGRAM_MAKER_MCP_ENABLED: "true"
+      DIAGRAM_MAKER_BASE_URL: http://diagram-maker:8091
+      SPRING_AI_MCP_CLIENT_INITIALIZED: "false"
     depends_on:
       config-server:
         condition: service_healthy
@@ -414,6 +420,32 @@ services:
       - sathish-net
     healthcheck:
       test: [ "CMD", "wget", "-qO-", "http://localhost:8081/actuator/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ── diagram-maker — renders PNG/SVG run-analysis dashboards (MCP server) ───
+  # Called only by runs-ai-analyzer over the docker network: MCP at /mcp, finished images at
+  # /api/diagrams/{file}. No host port on purpose: it has no authentication of its own.
+  # RUNS_AI_ANALYZER_BASE_URL overrides the value baked into the image (http://192.168.4.101:8081),
+  # which no longer works now that the analyzer is bound to the VM's loopback.
+  # Generated images live in a named volume so they survive restarts and Watchtower updates.
+  diagram-maker:
+    container_name: sathish-stack-diagram-maker
+    image: ghcr.io/sathishjayapal/diagram-maker:latest
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: production
+      SERVER_PORT: 8091
+      DIAGRAM_OUTPUT_DIR: /app/diagrams
+      RUNS_AI_ANALYZER_BASE_URL: http://runs-ai-analyzer:8081
+    volumes:
+      - diagram_maker_diagrams:/app/diagrams
+    networks:
+      - sathish-net
+    healthcheck:
+      test: [ "CMD", "wget", "-qO-", "http://localhost:8091/actuator/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -482,6 +514,7 @@ volumes:
   # >>> PROJECT-DB-VOLUMES:END
   rabbitmq_data:
   logger_data:
+  diagram_maker_diagrams:
 
 networks:
   sathish-net:
