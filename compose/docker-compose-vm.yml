@@ -408,6 +408,13 @@ services:
       DIAGRAM_MAKER_MCP_ENABLED: "true"
       DIAGRAM_MAKER_BASE_URL: http://diagram-maker:8091
       SPRING_AI_MCP_CLIENT_INITIALIZED: "false"
+      # Hosted open models through OpenRouter: the first tier of the chat chain (cheap, fast). Empty
+      # OPENROUTER_API_KEY switches the tier off. The key is a Portainer stack variable, never in this file.
+      # ALSO set a USD limit on that key in the OpenRouter dashboard (monthly reset): that limit, not the
+      # call cap below, is what really bounds the bill. Calls are capped per UTC day and per answer length.
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-meta-llama/llama-3.3-70b-instruct}
+      OPENROUTER_DAILY_CALL_CAP: ${OPENROUTER_DAILY_CALL_CAP:-200}
     depends_on:
       config-server:
         condition: service_healthy
@@ -419,9 +426,10 @@ services:
     # Linux Docker has no host.docker.internal by default. OLLAMA_BASE_URL points at the native Ollama on
     # this VM (listening on :11434), so map the name to the host; without this every analysis failed with
     # "host.docker.internal: Name does not resolve" (Nov 2026).
-    # Provider order is Anthropic -> ACG Ollama -> this Ollama. ANTHROPIC_API_KEY is not set here, so the
-    # Anthropic tier is disabled and local Ollama is the only one in use. To enable Anthropic, add
-    # ANTHROPIC_API_KEY under environment (from a Portainer stack variable, never in this file).
+    # Chat provider order: OpenRouter (OPENROUTER_API_KEY above) -> Anthropic (ANTHROPIC_API_KEY, not set here)
+    # -> ACG Ollama (ACG_OLLAMA_BASE_URL, unset) -> this Ollama. A tier without a key or URL is switched off, so
+    # with no keys local Ollama is the only one in use. To enable Anthropic, add ANTHROPIC_API_KEY under
+    # environment (from a Portainer stack variable, never in this file).
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:
