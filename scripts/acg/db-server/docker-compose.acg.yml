@@ -13,7 +13,6 @@
 #   2. Published ports remapped into ACG's fixed allowlist (you cannot open
 #      other ports on ACG cloud servers):
 #         config-server       8888 → host 8088   (8888 not allowlisted)
-#         sathishlogger       8090 unchanged     (8000-8100 allowed)
 #         eventstracker       9081 → host 9091   (9090-9094 allowed)
 #         dbcleaner           8085 unchanged
 #      Native RabbitMQ endpoints (no container, provisioned by the script):
@@ -64,25 +63,6 @@ services:
       timeout: 10s
       retries: 8
       start_period: 40s
-
-  sathishlogger:
-    image: travelhelper0h/sathishlogger:latest
-    restart: unless-stopped
-    ports:
-      - "8090:8080"
-    environment:
-      SERVER_PORT: 8080
-      DATABASE_URL: jdbc:h2:file:/app/data/sathishlogger
-      DATABASE_USERNAME: sa
-      DATABASE_PASSWORD: ""
-      JPA_DDL_AUTO: update
-      LOG_LEVEL: INFO
-      STORAGE_TYPE: database
-      LOG_RETENTION_DAYS: 30
-    volumes:
-      - logger_data:/app/data
-    networks:
-      - sathish-net
 
   eventstracker:
     image: travelhelper0h/eventstracker:latest
@@ -168,9 +148,6 @@ services:
       REPO_PASS: ${DOCKERHUB_TOKEN}
     networks:
       - sathish-net
-
-volumes:
-  logger_data:
 
 networks:
   sathish-net:

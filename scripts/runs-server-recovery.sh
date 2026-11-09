@@ -109,7 +109,7 @@ if command -v docker >/dev/null 2>&1; then
       [[ ${oneoff,,} != true ]] || { printf 'SKIP one-off container: %s\n' "$name"; continue; }
       choose=no
       case "$name" in
-        portainer|runs-app|runs-ai-analyzer|eventstracker|dbcleaner|sathishlogger|rabbitmq|runs-ai-analyzer-db|config-server|watchtower|cadvisor|diagram-maker|alloy|loki) choose=yes ;;
+        portainer|runs-app|runs-ai-analyzer|eventstracker|dbcleaner|rabbitmq|runs-ai-analyzer-db|config-server|watchtower|cadvisor|diagram-maker|alloy|loki) choose=yes ;;
       esac
       if [[ $status == running || $status == restarting || $policy == always || $policy == unless-stopped || $policy == on-failure ]]; then choose=yes; fi
       if [[ $choose != yes ]]; then

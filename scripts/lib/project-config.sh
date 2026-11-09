@@ -156,7 +156,6 @@ get_project_db_name() {
       ;;
     verbose-barnacle) echo "my-github-cleaner" ;;   # verbose-barnacle docker-compose default
     dbcleaner)        echo "dbcleaner" ;;
-    sathish-projects-logger) echo "sathishlogger" ;;
     mytracker)        echo "postgres" ;;
     *)                return 1 ;;
   esac
@@ -169,7 +168,6 @@ get_project_port() {
     runs-ai-analyzer) echo "5444" ;;
     verbose-barnacle) echo "5439" ;;
     dbcleaner)        echo "5433" ;;
-    sathish-projects-logger) echo "8432" ;;
     mytracker)        echo "5440" ;;
     *)                return 1 ;;
   esac
@@ -182,7 +180,6 @@ get_project_container() {
     runs-ai-analyzer) echo "runs-ai-analyzer-db" ;;
     verbose-barnacle) echo "verbose-barnacle-postgres-1" ;;  # compose default naming
     dbcleaner)        echo "dbcleaner-postgres-1" ;;
-    sathish-projects-logger) echo "sathishlogger-postgres" ;;  # project compose container_name
     mytracker)        echo "mytracker-db" ;;
     *)                return 1 ;;
   esac
@@ -195,7 +192,6 @@ get_project_password_env_var() {
     runs-ai-analyzer) echo "RUNS_AI_ANALYZER_DB_PASSWORD" ;;
     verbose-barnacle) echo "GITHUB_CLEANER_DB_PASSWORD" ;;
     dbcleaner)        echo "DBCLEANER_DB_PASSWORD" ;;
-    sathish-projects-logger) echo "SATHISHLOGGER_DB_PASSWORD" ;;
     mytracker)        echo "MYTRACKER_DB_PASSWORD" ;;
     *)                return 1 ;;
   esac
@@ -208,7 +204,6 @@ get_project_env_password_key() {
     runs-ai-analyzer) echo "RUNS_AI_ANALYZER_DB_PASSWORD" ;;
     verbose-barnacle) echo "GITHUB_CLEANER_DB_PASSWORD" ;;
     dbcleaner)        echo "JDBC_DATABASE_PASSWORD" ;;
-    sathish-projects-logger) echo "DATABASE_PASSWORD" ;;
     mytracker)        echo "MYTRACKER_DB_PASSWORD" ;;
     *)                return 1 ;;
   esac
@@ -228,7 +223,6 @@ get_project_db_user_env_key() {
     runs-ai-analyzer) echo "RUNS_AI_ANALYZER_DB_USER" ;;
     verbose-barnacle) echo "GITHUB_CLEANER_DB_USER" ;;
     dbcleaner)        echo "JDBC_DATABASE_USERNAME" ;;
-    sathish-projects-logger) echo "DATABASE_USERNAME" ;;
     mytracker)        echo "MYTRACKER_DB_USER" ;;
     *)                return 1 ;;
   esac
@@ -271,7 +265,6 @@ get_project_db_image() {
     runs-ai-analyzer) echo "pgvector/pgvector:pg17" ;;
     verbose-barnacle) echo "postgres:17.5" ;;
     dbcleaner)        echo "postgres:18.3" ;;
-    sathish-projects-logger) echo "postgres:15-alpine" ;;  # matches project's own local compose
     mytracker)        echo "postgres:17" ;;
     *)                return 1 ;;
   esac
@@ -281,7 +274,7 @@ get_project_db_image() {
 get_project_pg_mount() {
   case "$1" in
     runs-app|dbcleaner) echo "/var/lib/postgresql" ;;        # postgres 18+
-    eventstracker|runs-ai-analyzer|verbose-barnacle|sathish-projects-logger|mytracker) echo "/var/lib/postgresql/data" ;;
+    eventstracker|runs-ai-analyzer|verbose-barnacle|mytracker) echo "/var/lib/postgresql/data" ;;
     *)                return 1 ;;
   esac
 }
@@ -294,7 +287,6 @@ get_project_db_service() {
     runs-ai-analyzer) echo "runs-ai-analyzer-db" ;;
     verbose-barnacle) echo "github-cleaner-db" ;;
     dbcleaner)        echo "dbcleaner-db" ;;
-    sathish-projects-logger) echo "sathishlogger-db" ;;
     mytracker)        echo "mytracker-db" ;;
     *)                return 1 ;;
   esac
@@ -303,7 +295,7 @@ get_project_db_service() {
 # Service name inside compose/docker-compose-local.yml (LOCAL profile only — differs
 # from get_project_db_service, which is the VM stack's service naming). Empty return
 # (via `return 1`) means the project isn't on the shared local compose file and still
-# has its own standalone docker-compose.yml (verbose-barnacle, dbcleaner, sathish-projects-logger).
+# has its own standalone docker-compose.yml (verbose-barnacle, dbcleaner).
 get_project_local_service() {
   case "$1" in
     eventstracker)    echo "postgres" ;;
@@ -333,7 +325,6 @@ get_project_vm_volume() {
     runs-ai-analyzer) echo "pg_data_runs_ai_analyzer" ;;
     verbose-barnacle) echo "pg_data_github_cleaner" ;;
     dbcleaner)        echo "pg_data_dbcleaner" ;;
-    sathish-projects-logger) echo "pg_data_sathishlogger" ;;
     mytracker)        echo "pg_data_mytracker" ;;
     *)                return 1 ;;
   esac
@@ -348,7 +339,6 @@ get_project_db_name_key() {
     runs-ai-analyzer) echo "RUNS_AI_ANALYZER_DB_NAME" ;;
     verbose-barnacle) echo "GITHUB_CLEANER_DB_NAME" ;;
     dbcleaner)        echo "DBCLEANER_DB_NAME" ;;
-    sathish-projects-logger) echo "SATHISHLOGGER_DB_NAME" ;;
     mytracker)        echo "MYTRACKER_DB_NAME" ;;
     *)                return 1 ;;
   esac
@@ -361,7 +351,6 @@ get_project_db_user_key() {
     runs-ai-analyzer) echo "RUNS_AI_ANALYZER_DB_USER" ;;
     verbose-barnacle) echo "GITHUB_CLEANER_DB_USER" ;;
     dbcleaner)        echo "DBCLEANER_DB_USER" ;;
-    sathish-projects-logger) echo "SATHISHLOGGER_DB_USER" ;;
     mytracker)        echo "MYTRACKER_DB_USER" ;;
     *)                return 1 ;;
   esac
@@ -375,7 +364,6 @@ get_project_db_url_key() {
     runs-ai-analyzer) echo "RUNS_AI_ANALYZER_DB_URL" ;;
     verbose-barnacle) echo "GITHUB_CLEANER_DB_URL" ;;
     dbcleaner)        echo "JDBC_DATABASE_URL" ;;
-    sathish-projects-logger) echo "DATABASE_URL" ;;
     mytracker)        echo "MYTRACKER_DB_URL" ;;
     *)                return 1 ;;
   esac

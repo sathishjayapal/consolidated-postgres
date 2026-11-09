@@ -101,7 +101,7 @@ stop_project_stack() {
       return 0
     fi
   else
-    # Standalone project compose file (verbose-barnacle, dbcleaner, sathish-projects-logger).
+    # Standalone project compose file (verbose-barnacle, dbcleaner).
     args=(down)
     if [ "$REMOVE_VOLUMES" = true ]; then
       args+=(--volumes)

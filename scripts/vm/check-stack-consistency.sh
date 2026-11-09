@@ -65,7 +65,6 @@ config_ymls_for() {
     eventstracker)    echo "eventstracker/eventstracker-local.yml eventstracker/eventstracker-prod.yml" ;;
     dbcleaner)        echo "dbcleaner/dbcleaner-docker.yml" ;;
     verbose-barnacle) echo "my-github-cleaner/my-github-cleaner-local.yml" ;;
-    sathish-projects-logger) echo "sathishlogger/sathishlogger-prod.yml" ;;
     runs-ai-analyzer) echo "runs-ai-analyzer/runs-ai-analyzer-local.yml runs-ai-analyzer/runs-ai-analyzer-prod.yml" ;;
     runs-app)         echo "" ;;  # no config-server YAML yet — runs-app reads its own local .env directly
     *)                echo "" ;;
@@ -80,7 +79,6 @@ compose_service_for() {
     eventstracker)    echo "eventstracker" ;;
     dbcleaner)        echo "dbcleaner" ;;
     verbose-barnacle) echo "" ;;
-    sathish-projects-logger) echo "sathishlogger" ;;
     runs-app)         echo "" ;;  # only its DB is on the VM stack, not an app container
     runs-ai-analyzer) echo "" ;;  # only its DB is on the VM stack, not an app container
     *)                echo "" ;;
@@ -88,7 +86,7 @@ compose_service_for() {
 }
 
 # Projects this checker knows about (only ones with a CONFIG_YMLS entry).
-CHECKED_PROJECTS="eventstracker dbcleaner verbose-barnacle sathish-projects-logger runs-app runs-ai-analyzer"
+CHECKED_PROJECTS="eventstracker dbcleaner verbose-barnacle runs-app runs-ai-analyzer"
 
 extract_placeholders() {
   # Only bare ${VAR} (no colon) — these are hard requirements in Spring YAML

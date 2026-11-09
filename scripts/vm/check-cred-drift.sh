@@ -44,7 +44,6 @@ ROWS=(
  "runs-ai-analyzer|runs-ai-analyzer/.env|RUNS_AI_ANALYZER_DB_URL|RUNS_AI_ANALYZER_DB_USER|RUNS_AI_ANALYZER_DB_PASSWORD|RUNS_AI_ANALYZER_DB_USER|RUNS_AI_ANALYZER_DB_PASSWORD"
  "dbcleaner|dbcleaner/.env|JDBC_DATABASE_URL|JDBC_DATABASE_USERNAME|JDBC_DATABASE_PASSWORD||"
  "verbose-barnacle|verbose-barnacle/.env|GITHUB_CLEANER_DB_URL|GITHUB_CLEANER_DB_USER|GITHUB_CLEANER_DB_PASSWORD||"
- "sathish-projects-logger|sathish-projects-logger/.env|DATABASE_URL|DATABASE_USERNAME|DATABASE_PASSWORD||"
 )
 
 echo -e "${B}== Credential drift audit ==${NC}   golden: env/.env.local   VM: ${VM_IP:-<unknown>}"

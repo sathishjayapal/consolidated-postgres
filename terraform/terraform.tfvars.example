@@ -56,14 +56,6 @@ dbcleaner_db_user           = "dbcleaner_db_user"
 dbcleaner_db_password       = "YOUR_DBCLEANER_DB_PASSWORD"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Sathish Logger Database (native PostgreSQL on 172.17.0.1:5432)
-# ─────────────────────────────────────────────────────────────────────────────
-
-sathishlogger_db_name       = "sathishlogger"
-sathishlogger_db_user       = "sathishlogger_db_user"
-sathishlogger_db_password   = "YOUR_SATHISHLOGGER_DB_PASSWORD"
-
-# ─────────────────────────────────────────────────────────────────────────────
 # Event Domain (EventTracker initial user)
 # ─────────────────────────────────────────────────────────────────────────────
 

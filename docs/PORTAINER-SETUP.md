@@ -14,7 +14,6 @@ GitHub Actions ──builds linux/amd64──▶ Docker Hub  (travelhelper0h/*)
                           VirtualBox VM — Bridged Adapter (linux/amd64)
                             ├── Portainer       :9000
                             ├── config-server   :8888
-                            ├── sathishlogger   :8090
                             ├── eventstracker   :9081
                             ├── dbcleaner       :8085
                             ├── postgres
@@ -140,9 +139,6 @@ Startup order (enforced by `depends_on` + healthchecks):
 > `RUNS_APP_DB_*`, `RUNS_AI_ANALYZER_DB_*`, `EVENTS_TRACKER_DB_*`) are pushed
 > into the Portainer stack env automatically by `vm-db-up.sh` from each
 > project's local `.env`; you don't add them by hand.
->
-> **sathish-projects-logger DB env vars** — `SATHISHLOGGER_DB_NAME` / `_USER` / `_PASSWORD`,
-> pushed the same way once `sathish-projects-logger` is passed to `vm-db-up.sh`.
 
 ---
 

@@ -38,10 +38,6 @@ resource "docker_volume" "rabbitmq_data" {
   name = "rabbitmq_data"
 }
 
-resource "docker_volume" "logger_data" {
-  name = "logger_data"
-}
-
 # ─────────────────────────────────────────────────────────────────────────────
 # PostgreSQL with pgvector (runs-ai-analyzer database)
 # ─────────────────────────────────────────────────────────────────────────────
@@ -186,53 +182,6 @@ resource "docker_container" "config_server" {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Sathish Logger (Centralized Logging)
-# ─────────────────────────────────────────────────────────────────────────────
-
-resource "docker_image" "sathishlogger" {
-  name          = "travelhelper0h/sathishlogger:latest"
-  keep_locally  = false
-  pull_image    = true
-}
-
-resource "docker_container" "sathishlogger" {
-  name    = "sathish-stack-sathishlogger-1"
-  image   = docker_image.sathishlogger.image_id
-  restart = "unless-stopped"
-
-  env = [
-    "SERVER_PORT=8080",
-    "SPRING_PROFILES_ACTIVE=prod",
-    "CONFIG_SERVER_URL=http://config-server:8888",
-    "SPRING_CLOUD_CONFIG_USERNAME=${var.config_server_username}",
-    "SPRING_CLOUD_CONFIG_PASSWORD=${var.config_server_password}",
-    "DATABASE_URL=jdbc:postgresql://172.17.0.1:5432/${var.sathishlogger_db_name}",
-    "DATABASE_USERNAME=${var.sathishlogger_db_user}",
-    "DATABASE_PASSWORD=${var.sathishlogger_db_password}",
-    "JPA_DDL_AUTO=update",
-    "LOG_LEVEL=INFO",
-    "STORAGE_TYPE=database",
-    "LOG_RETENTION_DAYS=30",
-  ]
-
-  ports {
-    internal = 8080
-    external = 8090
-  }
-
-  volumes {
-    volume_name    = docker_volume.logger_data.name
-    container_path = "/app/data"
-  }
-
-  networks_advanced {
-    name = docker_network.sathish_net.name
-  }
-
-  depends_on = [docker_container.config_server]
-}
-
-# ─────────────────────────────────────────────────────────────────────────────
 # EventTracker Service
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -262,7 +211,6 @@ resource "docker_container" "eventstracker" {
     "RABBITMQ_PASSWORD=${var.rabbitmq_default_pass}",
     "EVENT_DOMAIN_USER=${var.event_domain_user}",
     "EVENT_DOMAIN_USER_PASSWORD=${var.event_domain_user_password}",
-    "SATHISHLOGGER_URL=http://sathishlogger:8080",
   ]
 
   ports {

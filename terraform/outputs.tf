@@ -12,11 +12,6 @@ output "eventstracker_url" {
   value       = "http://localhost:9081"
 }
 
-output "sathishlogger_url" {
-  description = "Sathish Logger service URL"
-  value       = "http://localhost:8090"
-}
-
 output "dbcleaner_url" {
   description = "DBCleaner service URL"
   value       = "http://localhost:8085"
@@ -91,7 +86,6 @@ output "container_ids" {
   value = {
     config_server         = docker_container.config_server.id
     eventstracker         = docker_container.eventstracker.id
-    sathishlogger         = docker_container.sathishlogger.id
     dbcleaner             = docker_container.dbcleaner.id
     runs_app              = docker_container.runs_app.id
     runs_ai_analyzer      = docker_container.runs_ai_analyzer.id

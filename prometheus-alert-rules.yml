@@ -9,7 +9,7 @@ groups:
       # ── Container Availability ─────────────────────────────────────────
       - alert: ContainerDown
         expr: |
-          up{job=~"config-server|eventstracker|sathishlogger|dbcleaner|runs-app|runs-ai-analyzer|rabbitmq"} == 0
+          up{job=~"config-server|eventstracker|dbcleaner|runs-app|runs-ai-analyzer|rabbitmq"} == 0
         for: 2m
         labels:
           severity: critical
@@ -20,8 +20,8 @@ groups:
       # ── JVM Heap Memory ────────────────────────────────────────────────
       - alert: HighJVMHeapUsage
         expr: |
-          (jvm_memory_used_bytes{area="heap",job=~"config-server|eventstracker|sathishlogger|dbcleaner|runs-app|runs-ai-analyzer"} /
-           jvm_memory_max_bytes{area="heap",job=~"config-server|eventstracker|sathishlogger|dbcleaner|runs-app|runs-ai-analyzer"}) > 0.85
+          (jvm_memory_used_bytes{area="heap",job=~"config-server|eventstracker|dbcleaner|runs-app|runs-ai-analyzer"} /
+           jvm_memory_max_bytes{area="heap",job=~"config-server|eventstracker|dbcleaner|runs-app|runs-ai-analyzer"}) > 0.85
         for: 5m
         labels:
           severity: warning
@@ -31,8 +31,8 @@ groups:
 
       - alert: CriticalJVMHeapUsage
         expr: |
-          (jvm_memory_used_bytes{area="heap",job=~"config-server|eventstracker|sathishlogger|dbcleaner|runs-app|runs-ai-analyzer"} /
-           jvm_memory_max_bytes{area="heap",job=~"config-server|eventstracker|sathishlogger|dbcleaner|runs-app|runs-ai-analyzer"}) > 0.95
+          (jvm_memory_used_bytes{area="heap",job=~"config-server|eventstracker|dbcleaner|runs-app|runs-ai-analyzer"} /
+           jvm_memory_max_bytes{area="heap",job=~"config-server|eventstracker|dbcleaner|runs-app|runs-ai-analyzer"}) > 0.95
         for: 1m
         labels:
           severity: critical
@@ -67,8 +67,8 @@ groups:
       # ── Database Connection Pool ──────────────────────────────────────
       - alert: HighDBConnections
         expr: |
-          (hikaricp_connections_active{job=~"runs-app|runs-ai-analyzer|eventstracker|sathishlogger|dbcleaner"} /
-           hikaricp_connections_max{job=~"runs-app|runs-ai-analyzer|eventstracker|sathishlogger|dbcleaner"}) > 0.8
+          (hikaricp_connections_active{job=~"runs-app|runs-ai-analyzer|eventstracker|dbcleaner"} /
+           hikaricp_connections_max{job=~"runs-app|runs-ai-analyzer|eventstracker|dbcleaner"}) > 0.8
         for: 5m
         labels:
           severity: warning
@@ -78,8 +78,8 @@ groups:
 
       - alert: DBConnectionPoolExhausted
         expr: |
-          (hikaricp_connections_active{job=~"runs-app|runs-ai-analyzer|eventstracker|sathishlogger|dbcleaner"} /
-           hikaricp_connections_max{job=~"runs-app|runs-ai-analyzer|eventstracker|sathishlogger|dbcleaner"}) > 0.95
+          (hikaricp_connections_active{job=~"runs-app|runs-ai-analyzer|eventstracker|dbcleaner"} /
+           hikaricp_connections_max{job=~"runs-app|runs-ai-analyzer|eventstracker|dbcleaner"}) > 0.95
         for: 1m
         labels:
           severity: critical

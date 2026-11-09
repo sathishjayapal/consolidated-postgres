@@ -46,8 +46,8 @@ teardown() {
 # PROJECTS array
 # ─────────────────────────────────────────────────────────────────────────────
 
-@test "PROJECTS array has exactly 7 entries" {
-  [ "${#PROJECTS[@]}" -eq 7 ]
+@test "PROJECTS array has exactly 6 entries" {
+  [ "${#PROJECTS[@]}" -eq 6 ]
 }
 
 @test "PROJECTS array contains eventstracker" {

@@ -128,26 +128,6 @@ variable "dbcleaner_db_password" {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Sathish Logger Database
-# ─────────────────────────────────────────────────────────────────────────────
-
-variable "sathishlogger_db_name" {
-  description = "Sathish Logger database name"
-  type        = string
-}
-
-variable "sathishlogger_db_user" {
-  description = "Sathish Logger database user"
-  type        = string
-}
-
-variable "sathishlogger_db_password" {
-  description = "Sathish Logger database password"
-  type        = string
-  sensitive   = true
-}
-
-# ─────────────────────────────────────────────────────────────────────────────
 # Event Domain (EventTracker initial user)
 # ─────────────────────────────────────────────────────────────────────────────
 
