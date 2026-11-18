@@ -1,0 +1,12 @@
+# /etc/netplan/50-cloud-init.yaml on runs-server (owner root, mode 600).
+# Captured from the server on 2026-11-18. This is the fix for the lockout:
+# without `dhcp-identifier: mac`, systemd-networkd sends a DUID as the DHCP
+# client ID, the router treats the box as a new client and hands out a new
+# address, so 192.168.4.101 stops answering SSH.
+# Install: see docs/RUNS_SERVER_HOST.md (always `netplan try`, never `apply`, over SSH).
+network:
+  version: 2
+  ethernets:
+    enp12s0:
+      dhcp4: true
+      dhcp-identifier: mac

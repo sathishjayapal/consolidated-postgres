@@ -1,0 +1,13 @@
+# Nightly backup of runs-server data (see scripts/vm/runs-server-backup.sh).
+# Install: see docs/RUNS_SERVER_HOST.md
+[Unit]
+Description=runs-server backup (native Postgres 16, pgvector, RabbitMQ definitions)
+Wants=network-online.target
+After=network-online.target postgresql@16-main.service docker.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/default/runs-server-backup
+ExecStart=/usr/local/sbin/runs-server-backup
+Nice=10
+IOSchedulingClass=idle

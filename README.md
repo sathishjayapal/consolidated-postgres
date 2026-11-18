@@ -156,6 +156,7 @@ See [RABBITMQ-README.md](RABBITMQ-README.md) for details.
 ## Documentation index
 
 - [START_HERE.md](START_HERE.md) — prerequisites & new-machine setup
+- [docs/RUNS_SERVER_HOST.md](docs/RUNS_SERVER_HOST.md) — runs-server host config (netplan, auto-login, LiteLLM) and nightly backups
 - [docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md) — environment decision tree & file map (local / VM / ACG / cloud)
 - [docs/LOCAL_ENV_WORKFLOW.md](docs/LOCAL_ENV_WORKFLOW.md) — local/cloud toggle & guardrails
 - [EVENT_DRIVEN_STARTUP.md](EVENT_DRIVEN_STARTUP.md) — correct service startup order
