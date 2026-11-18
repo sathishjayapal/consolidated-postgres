@@ -1,0 +1,11 @@
+# Provision the Loki datasource into the native Grafana on runs-server.
+# Install (needs sudo):
+#   scp grafana-loki-datasource.yaml vm:/tmp/
+#   ssh -t vm 'sudo install -m 640 -o root -g grafana /tmp/grafana-loki-datasource.yaml /etc/grafana/provisioning/datasources/loki.yaml && sudo systemctl restart grafana-server'
+apiVersion: 1
+datasources:
+  - name: Loki
+    type: loki
+    access: proxy
+    url: http://127.0.0.1:3100
+    editable: false
