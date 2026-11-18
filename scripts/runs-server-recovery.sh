@@ -32,7 +32,7 @@ while read -r unit state _; do
   [[ $unit == *.service && $unit != *@.service ]] || continue
   [[ $state != masked* ]] || continue
   case "$unit" in
-    prometheus.service|alertmanager.service|prometheus-alertmanager.service|prometheus-*-exporter*.service|grafana-server.service|grafana.service|node_exporter.service|node-exporter.service|prometheus-node-exporter.service|docker.service|containerd.service|postgresql.service|ssh.service|tailscaled.service|ollama.service|litellm*.service|wazuh-manager.service|wazuh-indexer.service|wazuh-dashboard.service|alloy.service|loki.service)
+    prometheus.service|alertmanager.service|prometheus-alertmanager.service|prometheus-*-exporter*.service|grafana-server.service|grafana.service|node.service|node_exporter.service|node-exporter.service|prometheus-node-exporter.service|filebeat.service|docker.service|containerd.service|postgresql.service|ssh.service|tailscaled.service|ollama.service|litellm*.service|wazuh-manager.service|wazuh-indexer.service|wazuh-dashboard.service|alloy.service|loki.service)
       selected["$unit"]=1 ;;
     *)
       fragment=$(systemctl show "$unit" -p FragmentPath --value)
@@ -131,8 +131,9 @@ if command -v docker >/dev/null 2>&1; then
       if ! docker update --restart=always "$id"; then issues+=("$name: restart policy update failed"); continue; fi
       selected_containers+=("$id")
     done
-    # Start the database and broker before applications when present.
-    for priority in runs-ai-analyzer-db rabbitmq; do
+    # Start the database, broker and config-server before applications when present
+    # (docker start ignores Compose depends_on; apps fetch config at startup).
+    for priority in runs-ai-analyzer-db rabbitmq config-server; do
       for id in "${selected_containers[@]}"; do
         name=$(docker inspect -f '{{.Name}}' "$id"); name=${name#/}
         [[ $(stack_service "$name") == "$priority" ]] || continue
