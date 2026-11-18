@@ -1,0 +1,33 @@
+# LiteLLM proxy on runs-server, as a system unit (replaces the old
+# ~/.config/systemd/user/litellm.service). Secrets stay in the env file on the
+# server (chmod 600); they are never committed here.
+#
+# Install:
+#   sudo cp systemd/litellm.service /etc/systemd/system/litellm.service
+#   systemctl --user disable --now litellm.service
+#   sudo systemctl daemon-reload && sudo systemctl enable --now litellm.service
+#   curl -s localhost:4000/health/liveliness
+#
+# Absolute paths, not %h: in a system unit %h is root's home even with User=.
+# Binds 0.0.0.0 because diagram-maker (a container) reaches it over the Docker
+# bridge; restrict LAN access with ufw rather than the bind address.
+[Unit]
+Description=LiteLLM proxy (model fallback + MCP gateway for diagram-maker)
+Wants=network-online.target
+After=network-online.target postgresql@16-main.service ollama.service
+
+[Service]
+Type=simple
+User=skminfotech
+Group=skminfotech
+WorkingDirectory=/home/skminfotech
+# DATABASE_URL, LITELLM_MASTER_KEY, OPENAI_API_KEY, UI_USERNAME, UI_PASSWORD
+EnvironmentFile=/home/skminfotech/.config/litellm/litellm.env
+# Refuse to start without a master key: an unauthenticated proxy on 0.0.0.0 is open to the LAN.
+ExecStartPre=/bin/sh -c 'test -n "$${LITELLM_MASTER_KEY}"'
+ExecStart=/home/skminfotech/litellm-venv/bin/litellm --config /home/skminfotech/.config/litellm/config.yaml --host 0.0.0.0 --port 4000
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

@@ -16,6 +16,13 @@ exec > >(tee "$backup/report.txt") 2>&1
 printf 'Recovery setup on runs-server. Backup and report: %s\n' "$backup"
 systemctl list-unit-files --type=service --no-pager > "$backup/services-before.txt"
 systemctl list-units --type=service --all --no-pager > "$backup/status-before.txt"
+# "sathish-stack-rabbitmq" / "sathish-stack-rabbitmq-1" / "rabbitmq" -> "rabbitmq"
+stack_service() {
+  local n=${1#sathish-stack-}
+  [[ $n =~ ^(.+)-[0-9]+$ ]] && n=${BASH_REMATCH[1]}
+  printf '%s' "$n"
+}
+
 declare -A selected=()
 declare -a managed=() issues=() unclassified=()
 
@@ -25,7 +32,7 @@ while read -r unit state _; do
   [[ $unit == *.service && $unit != *@.service ]] || continue
   [[ $state != masked* ]] || continue
   case "$unit" in
-    prometheus.service|alertmanager.service|prometheus-alertmanager.service|prometheus-*-exporter*.service|grafana-server.service|grafana.service|node_exporter.service|node-exporter.service|prometheus-node-exporter.service|docker.service|containerd.service|postgresql.service|ssh.service|tailscaled.service|ollama.service|litellm*.service|wazuh-manager.service|wazuh-indexer.service|wazuh-dashboard.service|alloy.service|loki.service)
+    prometheus.service|alertmanager.service|prometheus-alertmanager.service|prometheus-*-exporter*.service|grafana-server.service|grafana.service|node.service|node_exporter.service|node-exporter.service|prometheus-node-exporter.service|filebeat.service|docker.service|containerd.service|postgresql.service|ssh.service|tailscaled.service|ollama.service|litellm*.service|wazuh-manager.service|wazuh-indexer.service|wazuh-dashboard.service|alloy.service|loki.service)
       selected["$unit"]=1 ;;
     *)
       fragment=$(systemctl show "$unit" -p FragmentPath --value)
@@ -108,7 +115,11 @@ if command -v docker >/dev/null 2>&1; then
       oneoff=$(docker inspect -f '{{index .Config.Labels "com.docker.compose.oneoff"}}' "$id")
       [[ ${oneoff,,} != true ]] || { printf 'SKIP one-off container: %s\n' "$name"; continue; }
       choose=no
-      case "$name" in
+      # Compose names containers "sathish-stack-<service>" (container_name in
+      # docker-compose-vm.yml) or "sathish-stack-<service>-<n>" (Compose default);
+      # match on the bare service name so both forms and the old plain names work.
+      service=$(stack_service "$name")
+      case "$service" in
         portainer|runs-app|runs-ai-analyzer|eventstracker|dbcleaner|rabbitmq|runs-ai-analyzer-db|config-server|watchtower|cadvisor|diagram-maker|alloy|loki) choose=yes ;;
       esac
       if [[ $status == running || $status == restarting || $policy == always || $policy == unless-stopped || $policy == on-failure ]]; then choose=yes; fi
@@ -120,11 +131,14 @@ if command -v docker >/dev/null 2>&1; then
       if ! docker update --restart=always "$id"; then issues+=("$name: restart policy update failed"); continue; fi
       selected_containers+=("$id")
     done
-    # Start the database and broker before applications when present.
-    for priority in runs-ai-analyzer-db rabbitmq; do
+    # Start the database, broker and config-server before applications when present
+    # (docker start ignores Compose depends_on; apps fetch config at startup).
+    for priority in runs-ai-analyzer-db rabbitmq config-server; do
       for id in "${selected_containers[@]}"; do
-        name=$(docker inspect -f '{{.Name}}' "$id")
-        if [[ $name == "/$priority" ]] && [[ $(docker inspect -f '{{.State.Status}}' "$id") == exited || $(docker inspect -f '{{.State.Status}}' "$id") == created ]]; then
+        name=$(docker inspect -f '{{.Name}}' "$id"); name=${name#/}
+        [[ $(stack_service "$name") == "$priority" ]] || continue
+        status=$(docker inspect -f '{{.State.Status}}' "$id")
+        if [[ $status == exited || $status == created ]]; then
           docker start "$id" || issues+=("$priority: startup failed")
         fi
       done
