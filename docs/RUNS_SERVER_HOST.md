@@ -58,7 +58,7 @@ The whole `/var/backups/runs-server` tree is mirrored to `/srv/backups/runs-serv
 mac-mini server after every clean run. The job runs as root, so root gets its own key, and that key
 is locked with `rrsync` to that one folder (no shell, no other paths).
 
-1. **mac-mini server, read-only check first** (replace `<user>` with your login there):
+1. **mac-mini server, read-only check first** (login there is `sjkayap`; checked 2026-11-18: 196 GB free on `/`, `rsync` and `rrsync` present, `/srv` not created yet):
 
    ```bash
    whoami; df -h /srv 2>/dev/null || df -h /; command -v rsync rrsync
@@ -67,7 +67,7 @@ is locked with `rrsync` to that one folder (no shell, no other paths).
 2. **mac-mini server, create the folder:**
 
    ```bash
-   sudo install -d -m 700 -o <user> -g <user> /srv/backups/runs-server
+   sudo install -d -m 700 -o sjkayap -g sjkayap /srv/backups/runs-server
    ```
 
 3. **runs-server, create root's key and pin the host key:**
@@ -79,7 +79,7 @@ is locked with `rrsync` to that one folder (no shell, no other paths).
    ```
 
 4. **mac-mini server, authorize it for rsync into that folder only** — one line in
-   `~<user>/.ssh/authorized_keys`, with the public key from step 3:
+   `/home/sjkayap/.ssh/authorized_keys`, with the public key from step 3:
 
    ```
    restrict,command="/usr/bin/rrsync /srv/backups/runs-server" ssh-ed25519 AAAA... runs-server-backup
@@ -89,7 +89,7 @@ is locked with `rrsync` to that one folder (no shell, no other paths).
 
    ```bash
    sudo tee /etc/default/runs-server-backup <<'CONF'
-   OFFSITE_TARGET=<user>@192.168.4.236:.
+   OFFSITE_TARGET=sjkayap@192.168.4.236:.
    OFFSITE_SSH_KEY=/root/.ssh/runs-server-backup
    CONF
    sudo chmod 600 /etc/default/runs-server-backup
