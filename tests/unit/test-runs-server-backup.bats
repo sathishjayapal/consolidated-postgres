@@ -86,5 +86,20 @@ teardown() { rm -rf "$T"; }
   export OFFSITE_TARGET="skminfotech@192.168.4.236:/srv/backups/runs-server"
   run "$SCRIPT"
   [ "$status" -eq 0 ]
-  grep -q "rsync -a --delete $BACKUP_ROOT/ skminfotech@192.168.4.236:/srv/backups/runs-server/" "$MOCK_LOG"
+  grep -q "rsync -a --delete -e ssh -o BatchMode=yes -o ConnectTimeout=15 $BACKUP_ROOT/ skminfotech@192.168.4.236:/srv/backups/runs-server/" "$MOCK_LOG"
+}
+
+@test "rsync uses the dedicated key when OFFSITE_SSH_KEY is set" {
+  export OFFSITE_TARGET="u@h:/b" OFFSITE_SSH_KEY=/root/.ssh/runs-server-backup
+  run "$SCRIPT"
+  [ "$status" -eq 0 ]
+  grep -q -- "-i /root/.ssh/runs-server-backup -o IdentitiesOnly=yes" "$MOCK_LOG"
+}
+
+@test "failed rsync fails the run" {
+  printf '#!/usr/bin/env bash\nexit 12\n' > "$MOCK/rsync"
+  export OFFSITE_TARGET="u@h:/b"
+  run "$SCRIPT"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"FAIL: rsync to u@h:/b"* ]]
 }

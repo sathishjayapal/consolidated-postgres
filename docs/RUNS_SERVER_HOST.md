@@ -47,15 +47,67 @@ in-flight RabbitMQ messages, Docker images. Local copies: 7 daily + 4 weekly und
 ```bash
 sudo install -m 750 scripts/vm/runs-server-backup.sh /usr/local/sbin/runs-server-backup
 sudo cp systemd/runs-server-backup.service systemd/runs-server-backup.timer /etc/systemd/system/
-# optional offsite: echo 'OFFSITE_TARGET=user@host:/path' | sudo tee /etc/default/runs-server-backup
 sudo systemctl daemon-reload
-sudo systemctl start runs-server-backup && journalctl -u runs-server-backup -n 30 --no-pager
+sudo systemctl start runs-server-backup && journalctl -u runs-server-backup -n 30 --no-pager   # local only for now
 sudo systemctl enable --now runs-server-backup.timer
 ```
 
-Offsite: `OFFSITE_TARGET` takes `user@host:/path` (rsync over SSH, root needs a key for that host) or
-`rclone:remote:path`. Empty means local only, and the job logs a warning every night. A run with
-failures never syncs offsite, because the sync deletes files the local side no longer has.
+### Offsite copy → mac-mini server (sats13mini-server, 192.168.4.236)
+
+The whole `/var/backups/runs-server` tree is mirrored to `/srv/backups/runs-server` on the
+mac-mini server after every clean run. The job runs as root, so root gets its own key, and that key
+is locked with `rrsync` to that one folder (no shell, no other paths).
+
+1. **mac-mini server, read-only check first** (replace `<user>` with your login there):
+
+   ```bash
+   whoami; df -h /srv 2>/dev/null || df -h /; command -v rsync rrsync
+   ```
+
+2. **mac-mini server, create the folder:**
+
+   ```bash
+   sudo install -d -m 700 -o <user> -g <user> /srv/backups/runs-server
+   ```
+
+3. **runs-server, create root's key and pin the host key:**
+
+   ```bash
+   sudo ssh-keygen -t ed25519 -N '' -C 'runs-server-backup' -f /root/.ssh/runs-server-backup
+   sudo sh -c 'ssh-keyscan -t ed25519 192.168.4.236 >> /root/.ssh/known_hosts'
+   sudo cat /root/.ssh/runs-server-backup.pub
+   ```
+
+4. **mac-mini server, authorize it for rsync into that folder only** — one line in
+   `~<user>/.ssh/authorized_keys`, with the public key from step 3:
+
+   ```
+   restrict,command="/usr/bin/rrsync /srv/backups/runs-server" ssh-ed25519 AAAA... runs-server-backup
+   ```
+
+5. **runs-server, point the job at it.** With `rrsync` the path is relative to the locked folder, hence `:.`:
+
+   ```bash
+   sudo tee /etc/default/runs-server-backup <<'CONF'
+   OFFSITE_TARGET=<user>@192.168.4.236:.
+   OFFSITE_SSH_KEY=/root/.ssh/runs-server-backup
+   CONF
+   sudo chmod 600 /etc/default/runs-server-backup
+   ```
+
+6. **Test it**, then check the files landed on the mac-mini server:
+
+   ```bash
+   sudo systemctl start runs-server-backup && journalctl -u runs-server-backup -n 30 --no-pager
+   # on the mac-mini server:
+   ls -l /srv/backups/runs-server/daily/
+   ```
+
+Trade-offs: the mac-mini server is on the same LAN and in the same house, so this protects against
+runs-server's disk dying or a bad change, not against fire or theft. The sync mirrors deletes (a run
+with failures never syncs), so if runs-server itself were compromised, the key could still empty that
+folder; `rrsync -no-del` plus pruning on the mac-mini side would close that, at the cost of a second
+retention job. `rclone:remote:path` is still supported if you want a real offsite copy later.
 
 ### Restore test (do this once after install, then quarterly)
 

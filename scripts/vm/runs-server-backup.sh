@@ -19,6 +19,7 @@
 #   KEEP_DAILY=7  KEEP_WEEKLY=4
 #   OFFSITE_TARGET=            # empty = local only (warns)
 #                              # rsync:  user@host:/path
+#   OFFSITE_SSH_KEY=           # rsync only: key for the target (root runs this job)
 #                              # rclone: rclone:remote:path
 #
 # Install and restore steps: docs/RUNS_SERVER_HOST.md
@@ -28,6 +29,7 @@ BACKUP_ROOT=${BACKUP_ROOT:-/var/backups/runs-server}
 KEEP_DAILY=${KEEP_DAILY:-7}
 KEEP_WEEKLY=${KEEP_WEEKLY:-4}
 OFFSITE_TARGET=${OFFSITE_TARGET:-}
+OFFSITE_SSH_KEY=${OFFSITE_SSH_KEY:-}
 PGVECTOR_CONTAINER=${PGVECTOR_CONTAINER:-sathish-stack-runs-ai-analyzer-db}
 RABBITMQ_CONTAINER=${RABBITMQ_CONTAINER:-sathish-stack-rabbitmq}
 TODAY=${BACKUP_DATE:-$(date +%F)}
@@ -129,7 +131,9 @@ case $OFFSITE_TARGET in
   "")       log "WARN: OFFSITE_TARGET not set — backups are on runs-server only" ;;
   rclone:*) rclone sync "$BACKUP_ROOT" "${OFFSITE_TARGET#rclone:}" \
               && log "offsite ok (rclone)" || fail "rclone sync to ${OFFSITE_TARGET#rclone:}" ;;
-  *)        rsync -a --delete "$BACKUP_ROOT/" "$OFFSITE_TARGET/" \
+  *)        ssh_cmd="ssh -o BatchMode=yes -o ConnectTimeout=15"
+            [[ -n $OFFSITE_SSH_KEY ]] && ssh_cmd+=" -i $OFFSITE_SSH_KEY -o IdentitiesOnly=yes"
+            rsync -a --delete -e "$ssh_cmd" "$BACKUP_ROOT/" "$OFFSITE_TARGET/" \
               && log "offsite ok (rsync)" || fail "rsync to $OFFSITE_TARGET" ;;
 esac
 
