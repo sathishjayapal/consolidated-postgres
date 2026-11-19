@@ -72,6 +72,23 @@ sudo ufw reload && sudo iptables -F DOCKER-USER && sudo ip6tables -F DOCKER-USER
 Tailscale address once with `./scripts/vm/set-vm-ip.sh 100.108.86.108` (try `--dry-run` first), and
 use `100.108.86.108` as the host in IntelliJ data sources. Over the LAN IP those ports now time out.
 
+### Postgres access over Tailscale
+
+The firewall alone is not enough for native Postgres: `pg_hba.conf` must also accept the client's
+Tailscale address. Added 2026-11-18 for the Mac (`mb-air`, Tailscale `100.80.249.31`); all login
+roles use SCRAM, so the method is `scram-sha-256`. One address, not the whole tailnet:
+
+```bash
+sudo cp -a /etc/postgresql/16/main/pg_hba.conf /etc/postgresql/16/main/pg_hba.conf.bak-tailscale
+echo "host    all    all    100.80.249.31/32    scram-sha-256    # Mac over Tailscale (mb-air)" \
+  | sudo tee -a /etc/postgresql/16/main/pg_hba.conf >/dev/null
+sudo -u postgres psql -tAc "select line_number, error from pg_hba_file_rules where error is not null"  # must be empty
+sudo systemctl reload postgresql@16-main
+```
+
+A new dev machine needs its own line (its address is in `tailscale status`). The pgvector
+container (5444) is not affected; it accepts password logins from any address.
+
 If a port is added to `docker-compose-vm.yml` that should not be on the LAN, add a matching line to
 `host/ufw/docker-lan.rules` and re-append the block.
 
