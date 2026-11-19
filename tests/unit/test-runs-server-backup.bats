@@ -103,3 +103,12 @@ teardown() { rm -rf "$T"; }
   [ "$status" -ne 0 ]
   [[ "$output" == *"FAIL: rsync to u@h:/b"* ]]
 }
+
+@test "second run on the same day: SHA256SUMS lists only backup files and verifies" {
+  run "$SCRIPT"; [ "$status" -eq 0 ]
+  run "$SCRIPT"; [ "$status" -eq 0 ]
+  d="$BACKUP_ROOT/daily/2026-11-18"
+  ! grep -qE ' (SHA256SUMS|STATUS|SHA256SUMS.tmp)$' "$d/SHA256SUMS"
+  [ "$(wc -l < "$d/SHA256SUMS")" -eq 6 ]   # 3 mock DBs + globals + pgvector + rabbitmq
+  (cd "$d" && sha256sum -c --quiet SHA256SUMS)
+}

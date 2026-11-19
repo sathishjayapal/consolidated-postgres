@@ -101,7 +101,9 @@ else
   fail "rabbitmq export_definitions (see $(basename "$f").err)"
 fi
 
-(cd "$dest" && sha256sum -- * > SHA256SUMS 2>/dev/null)
+# Checksum the backup files only; SHA256SUMS/STATUS from an earlier run the
+# same day would otherwise be listed and then go stale when rewritten.
+(cd "$dest" && rm -f SHA256SUMS STATUS && sha256sum -- * > SHA256SUMS.tmp 2>/dev/null && mv SHA256SUMS.tmp SHA256SUMS)
 printf 'failures=%d\nfinished=%s\n' "$failures" "$(date -Is)" > "$dest/STATUS"
 
 # ── retention ───────────────────────────────────────────────────────────────
