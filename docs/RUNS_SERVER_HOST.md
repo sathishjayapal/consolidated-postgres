@@ -111,26 +111,35 @@ retention job. `rclone:remote:path` is still supported if you want a real offsit
 
 ### Restore test (do this once after install, then quarterly)
 
-Restore into scratch databases, never over the live ones:
+Backups are root-only (700/600), so every read goes through `sudo cat`. Restores go into scratch
+databases named `restore_test`, never over the live ones. Safe to paste as one block:
 
 ```bash
-B=/var/backups/runs-server/daily/$(date +%F)
-cat $B/STATUS && (cd $B && sha256sum -c SHA256SUMS)
+B=/var/backups/runs-server/daily/$(date +%F)     # server clock is UTC
+sudo cat $B/STATUS && sudo sh -c "cd $B && sha256sum -c SHA256SUMS"
 
 # native Postgres 16
 sudo -u postgres createdb restore_test
-sudo -u postgres pg_restore --no-owner -d restore_test $B/pg16-runsapp_db.dump
-sudo -u postgres psql -d restore_test -c '\dt' && sudo -u postgres dropdb restore_test
+sudo cat $B/pg16-runsapp_db.dump | sudo -u postgres pg_restore --no-owner -d restore_test
+sudo -u postgres psql -d restore_test -c '\dt'
+sudo -u postgres dropdb restore_test
 
 # pgvector
 docker exec sathish-stack-runs-ai-analyzer-db sh -c 'createdb -U "$POSTGRES_USER" restore_test'
-docker exec -i sathish-stack-runs-ai-analyzer-db sh -c 'pg_restore --no-owner -U "$POSTGRES_USER" -d restore_test' \
-  < $B/pgvector-runs-ai-analyzer.dump
+sudo cat $B/pgvector-runs-ai-analyzer.dump | docker exec -i sathish-stack-runs-ai-analyzer-db \
+  sh -c 'pg_restore --no-owner -U "$POSTGRES_USER" -d restore_test'
+docker exec sathish-stack-runs-ai-analyzer-db sh -c 'psql -U "$POSTGRES_USER" -d restore_test -c "\dt"'
 docker exec sathish-stack-runs-ai-analyzer-db sh -c 'dropdb -U "$POSTGRES_USER" restore_test'
 
-# RabbitMQ (real restore, only on a rebuilt broker)
-docker cp $B/rabbitmq-definitions.json sathish-stack-rabbitmq:/tmp/defs.json
-docker exec sathish-stack-rabbitmq rabbitmqctl import_definitions /tmp/defs.json
+# RabbitMQ: check the export only (importing changes the live broker)
+sudo python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print({k: len(v) for k, v in d.items() if isinstance(v, list)})" $B/rabbitmq-definitions.json
+```
+
+Real RabbitMQ restore, **only on a rebuilt or empty broker** (it applies users, vhosts, queues and
+bindings to the running broker):
+
+```bash
+sudo cat $B/rabbitmq-definitions.json | docker exec -i sathish-stack-rabbitmq rabbitmqctl import_definitions -
 ```
 
 For a full rebuild of native Postgres: restore `pg16-globals.sql` first (`psql -f`), then each
