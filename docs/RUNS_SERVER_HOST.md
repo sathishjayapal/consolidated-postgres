@@ -8,6 +8,8 @@ outside Docker. This repo is the source of truth for them; the server copies wer
 | `host/netplan/50-cloud-init.yaml` | `/etc/netplan/50-cloud-init.yaml` (root, 600) | `dhcp-identifier: mac` keeps the DHCP lease (and SSH) on 192.168.4.101 — the lockout fix |
 | `host/cloud-init/99-disable-network-config.cfg` | `/etc/cloud/cloud.cfg.d/99-disable-network-config.cfg` | stops cloud-init regenerating netplan without `dhcp-identifier: mac` |
 | `host/systemd/getty@tty1.service.d/autologin.conf` | `/etc/systemd/system/getty@tty1.service.d/autologin.conf` | console auto-login; the box has no keyboard |
+| `host/ufw/ufw-rules.sh` | ufw rules (`/etc/ufw/user.rules`, generated) | host firewall: LAN gets SSH, Grafana, Wazuh dashboard only; Tailscale and Docker networks get everything |
+| `host/ufw/docker-lan.rules` | appended to `/etc/ufw/after.rules` and `/etc/ufw/after6.rules` | blocks LAN access to Docker ports 5444, 5672, 15672, 8888, 9099 (ufw can't see Docker ports) |
 | `systemd/litellm.service` | `/etc/systemd/system/litellm.service` | LiteLLM proxy; secrets in `/home/skminfotech/.config/litellm/litellm.env` (600, not in git) |
 | `scripts/vm/runs-server-backup.sh` + `systemd/runs-server-backup.{service,timer}` | `/usr/local/sbin/runs-server-backup`, `/etc/systemd/system/` | nightly backups |
 
@@ -29,6 +31,49 @@ Over SSH, never use `netplan apply`. `netplan try` rolls back after 120 s unless
 sudo install -m 600 -o root -g root host/netplan/50-cloud-init.yaml /etc/netplan/50-cloud-init.yaml
 sudo netplan generate && sudo netplan try
 ```
+
+## Firewall
+
+Applied 2026-11-18. The LAN (`192.168.4.0/22`) reaches only SSH (22), Grafana (3000), the Wazuh
+dashboard (443) and the Docker-published app UIs (8080, 9081, 7080, 8085, Portainer 9000).
+Everything else (Postgres 5432/5444, RabbitMQ 5672/15672, config-server 8888, Ollama, LiteLLM,
+Prometheus, exporters, Wazuh 1514/1515/55000) is reachable over **Tailscale** (`runs-server` /
+`100.108.86.108`) and from the server itself only.
+
+Two layers, because ufw cannot filter Docker-published ports:
+
+```bash
+# 1. host services (arms a 10-minute auto-disable if ufw was off; test, then cancel it)
+sudo bash host/ufw/ufw-rules.sh
+sudo systemctl stop ufw-safety.timer     # only after the tests below pass
+
+# 2. Docker-published ports (cannot lock out SSH or Tailscale, so no timer)
+grep -q 'BEGIN docker-lan' /etc/ufw/after.rules || {
+  sudo cp -a /etc/ufw/after.rules  /etc/ufw/after.rules.bak-docker-lan
+  sudo cp -a /etc/ufw/after6.rules /etc/ufw/after6.rules.bak-docker-lan
+  sed -n '/^# BEGIN docker-lan/,/^# END docker-lan/p' host/ufw/docker-lan.rules | sudo tee -a /etc/ufw/after.rules  >/dev/null
+  sed -n '/^# BEGIN docker-lan/,/^# END docker-lan/p' host/ufw/docker-lan.rules | sudo tee -a /etc/ufw/after6.rules >/dev/null
+}
+sudo ufw reload && sudo iptables -S DOCKER-USER && sudo ip6tables -S DOCKER-USER
+```
+
+Test from a LAN machine (the Mac): `nc -vz -G 3 192.168.4.101 5444` times out,
+`nc -vz runs-server 5444` succeeds, `ssh skminfotech@192.168.4.101` still works.
+
+Rollback of layer 2:
+
+```bash
+sudo cp -a /etc/ufw/after.rules.bak-docker-lan /etc/ufw/after.rules
+sudo cp -a /etc/ufw/after6.rules.bak-docker-lan /etc/ufw/after6.rules
+sudo ufw reload && sudo iptables -F DOCKER-USER && sudo ip6tables -F DOCKER-USER
+```
+
+**Local dev against runs-server needs Tailscale running on the Mac.** Point every project at the
+Tailscale address once with `./scripts/vm/set-vm-ip.sh 100.108.86.108` (try `--dry-run` first), and
+use `100.108.86.108` as the host in IntelliJ data sources. Over the LAN IP those ports now time out.
+
+If a port is added to `docker-compose-vm.yml` that should not be on the LAN, add a matching line to
+`host/ufw/docker-lan.rules` and re-append the block.
 
 ## Console auto-login
 

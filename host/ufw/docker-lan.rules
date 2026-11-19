@@ -1,0 +1,18 @@
+# Appended to BOTH /etc/ufw/after.rules and /etc/ufw/after6.rules on runs-server (2026-11-18).
+# ufw cannot filter Docker-published ports (Docker DNATs them before ufw's INPUT rules), so this
+# drops NEW connections that arrive on the LAN interface (enp12s0) for container ports that should
+# be Tailscale/localhost only. Matches the port the client asked for (--ctorigdstport), so 5444 is
+# caught even though Docker forwards it to 5432. Tailscale (tailscale0), localhost and
+# container-to-container traffic never arrive on enp12s0, so they are unaffected.
+# Install / rollback: docs/RUNS_SERVER_HOST.md#firewall
+
+# BEGIN docker-lan: block LAN (enp12s0) to internal container ports; Tailscale/localhost unaffected
+*filter
+:DOCKER-USER - [0:0]
+-A DOCKER-USER -i enp12s0 -p tcp -m conntrack --ctorigdstport 5444  --ctdir ORIGINAL -j DROP
+-A DOCKER-USER -i enp12s0 -p tcp -m conntrack --ctorigdstport 5672  --ctdir ORIGINAL -j DROP
+-A DOCKER-USER -i enp12s0 -p tcp -m conntrack --ctorigdstport 15672 --ctdir ORIGINAL -j DROP
+-A DOCKER-USER -i enp12s0 -p tcp -m conntrack --ctorigdstport 8888  --ctdir ORIGINAL -j DROP
+-A DOCKER-USER -i enp12s0 -p tcp -m conntrack --ctorigdstport 9099  --ctdir ORIGINAL -j DROP
+COMMIT
+# END docker-lan
