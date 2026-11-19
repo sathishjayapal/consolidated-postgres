@@ -6,21 +6,22 @@ outside Docker. This repo is the source of truth for them; the server copies wer
 | Repo file | On the server | Why |
 |---|---|---|
 | `host/netplan/50-cloud-init.yaml` | `/etc/netplan/50-cloud-init.yaml` (root, 600) | `dhcp-identifier: mac` keeps the DHCP lease (and SSH) on 192.168.4.101 — the lockout fix |
+| `host/cloud-init/99-disable-network-config.cfg` | `/etc/cloud/cloud.cfg.d/99-disable-network-config.cfg` | stops cloud-init regenerating netplan without `dhcp-identifier: mac` |
 | `host/systemd/getty@tty1.service.d/autologin.conf` | `/etc/systemd/system/getty@tty1.service.d/autologin.conf` | console auto-login; the box has no keyboard |
 | `systemd/litellm.service` | `/etc/systemd/system/litellm.service` | LiteLLM proxy; secrets in `/home/skminfotech/.config/litellm/litellm.env` (600, not in git) |
 | `scripts/vm/runs-server-backup.sh` + `systemd/runs-server-backup.{service,timer}` | `/usr/local/sbin/runs-server-backup`, `/etc/systemd/system/` | nightly backups |
 
 ## Netplan — install safely
 
-The file is named `50-cloud-init.yaml` because the installer wrote it. Check that cloud-init won't
-rewrite it (read-only):
+The file is named `50-cloud-init.yaml` because the installer wrote it. Two things keep cloud-init
+from rewriting it (checked 2026-11-18): `/etc/cloud/cloud-init.disabled` exists, and
+`host/cloud-init/99-disable-network-config.cfg` is installed. The second matters if the first is ever
+removed, because `/etc/cloud/cloud.cfg.d/90-installer-network.cfg` holds the installer's config
+without `dhcp-identifier: mac`.
 
 ```bash
-ls /etc/cloud/cloud.cfg.d/ | grep -i network; cat /etc/cloud/cloud.cfg.d/*network* 2>/dev/null
+sudo install -m 644 host/cloud-init/99-disable-network-config.cfg /etc/cloud/cloud.cfg.d/
 ```
-
-If nothing says `network: {config: disabled}`, add that file before the next re-image, otherwise a
-cloud-init re-run can drop `dhcp-identifier: mac` and cause the same lockout.
 
 Over SSH, never use `netplan apply`. `netplan try` rolls back after 120 s unless you confirm:
 
